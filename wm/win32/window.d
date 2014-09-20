@@ -39,22 +39,14 @@ class Win32Window: BaseWindow {
 	}
 
 	this(int w, int h, string t){
+		wm.add(this);
 		title = t;
 		size = [w, h];
 		eventQueue = new List!Event;
 		RECT targetSize = {0, 0, size.x, size.y};
 		AdjustWindowRect(&targetSize, WS_OVERLAPPEDWINDOW | WS_VISIBLE, false);
-		WNDCLASSW wc;
-		wc.lpfnWndProc = cast(WNDPROC)&internalEvents;
-		wc.hInstance = wm.getInstance();
-		wc.hIcon = LoadIconA(null,IDI_APPLICATION);
-		wc.hCursor = LoadCursorA(null, IDC_ARROW);
-		wc.hbrBackground = cast(HBRUSH)GetStockObject(BLACK_BRUSH);
-		wc.lpszClassName = "wm::windowClass".toUTF16z();
-		wc.style = CS_OWNDC;
-		RegisterClassW(&wc);
 		windowHandle = CreateWindowExW(
-			0, wc.lpszClassName, title.toUTF16z(),
+			0, wm.windowClass.lpszClassName, title.toUTF16z(),
 			WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
 			targetSize.right-targetSize.left, targetSize.bottom-targetSize.top,
 			null, null, wm.getInstance, null
@@ -111,6 +103,16 @@ class Win32Window: BaseWindow {
 		return pid;
 	}
 	
+	bool _focus = false;
+
+	@property
+	override bool hasFocus(){
+		return _focus;
+	}
+
+	override void onKeyboardFocus(bool b){
+		_focus = b;
+	}
 
 	override void createGraphicsContext(){
 		deviceContext = GetDC(windowHandle);
@@ -225,7 +227,7 @@ class Win32Window: BaseWindow {
 		wm.activeWindow = this;
 	}
 
-	override void processEvent(Event e){
+	bool processEvent(Event e){
 		switch(e.msg){
 			/+ Gamepads & Joysticks
 			case WM_CREATE: {
@@ -236,7 +238,7 @@ class Win32Window: BaseWindow {
 				rid.hwndTarget  = hWnd;
 				if(!RegisterRawInputDevices(&rid, 1, sizeof(RAWINPUTDEVICE)))
 					return -1;
-				break;
+				return true;
 			}
 			case WM_INPUT: {
 				PRAWINPUT pRawInput;
@@ -261,41 +263,41 @@ class Win32Window: BaseWindow {
 				if(input.header.dwType == RIM_TYPEMOUSE){
 					onRawMouse(input.mouse.lLastX, input.mouse.lLastY);
 				}
-				break;
+				return true;
 			}
 			case WM_PAINT:
 				shouldRedraw = false;
 				onDraw();
-				break;
+				return true;
 			case WM_SHOWWINDOW:
 				onShow();
-				break;
+				return true;
 			case WM_CLOSE:
 				hide();
-				break;
+				return true;
 			case WM_SIZE:
 				onResize(LOWORD(e.lpar),HIWORD(e.lpar));
 				size = [LOWORD(e.lpar),HIWORD(e.lpar)];
-				break;
+				return true;
 			case WM_KEYDOWN:
 				Keyboard.key c = cast(Keyboard.key)toLower(cast(char)e.wpar);
 				Keyboard.set(c, true);
 				onKeyboard(c, true);
-				break;
+				return true;
 			case WM_KEYUP:
 				auto c = cast(Keyboard.key)toLower(cast(char)e.wpar);
 				Keyboard.set(c, false);
 				onKeyboard(c, false);
-				break;
+				return true;
 			case WM_CHAR:
 				onKeyboard(cast(dchar)e.wpar);
-				break;
+				return true;
 			case WM_ACTIVATE:
 				onKeyboardFocus(LOWORD(e.wpar) > 0 ? true : false);
-				break;
+				return true;
 			case WM_SETCURSOR:
 				SetCursor(MOUSE_CURSOR_TO_HCUR[cast(int)cursor]);
-				break;
+				return true;
 			case WM_MOUSEMOVE:
 				if(!(parent && parent.mouseChild != this)){
 					TRACKMOUSEEVENT tme = {
@@ -305,36 +307,36 @@ class Win32Window: BaseWindow {
 					onMouseFocus(true);
 				}
 				onMouseMove(GET_X_LPARAM(e.lpar), size.y-GET_Y_LPARAM(e.lpar));
-				break;
+				return true;
 			case WM_MOUSELEAVE:
 				onMouseFocus(false);
-				break;
+				return true;
 			case WM_LBUTTONDOWN:
 				onMouseButton(Mouse.buttonLeft, true, LOWORD(e.lpar), HIWORD(e.lpar));
-				break;
+				return true;
 			case WM_LBUTTONUP:
 				onMouseButton(Mouse.buttonLeft, false, LOWORD(e.lpar), HIWORD(e.lpar));
-				break;
+				return true;
 			case WM_MBUTTONDOWN:
 				onMouseButton(Mouse.buttonMiddle, true, LOWORD(e.lpar), HIWORD(e.lpar));
-				break;
+				return true;
 			case WM_MBUTTONUP:
 				onMouseButton(Mouse.buttonMiddle, false, LOWORD(e.lpar), HIWORD(e.lpar));
-				break;
+				return true;
 			case WM_RBUTTONDOWN:
 				onMouseButton(Mouse.buttonRight, true, LOWORD(e.lpar), HIWORD(e.lpar));
-				break;
+				return true;
 			case WM_RBUTTONUP:
 				onMouseButton(Mouse.buttonRight, false, LOWORD(e.lpar), HIWORD(e.lpar));
-				break;
+				return true;
 			case WM_MOUSEWHEEL:
 				onMouseButton(
 						GET_WHEEL_DELTA_WPARAM(e.wpar) > 120 ? Mouse.wheelDown : Mouse.wheelUp,
 						true, LOWORD(e.lpar), HIWORD(e.lpar)
 				);
-				break;
+				return true;
 			default:
-				throw new Exception("no event handler");
+				return false;
 		}
 	}
 

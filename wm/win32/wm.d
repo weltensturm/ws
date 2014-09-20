@@ -27,14 +27,9 @@ class Win32WindowManager: BaseWindowManager {
 	T_wglChoosePixelFormatARB wglChoosePixelFormatARB;
 	T_wglCreateContextAttribsARB wglCreateContextAttribsARB;
 
-	protected {
+	package {
 		HINSTANCE appInstance;
-		WNDCLASSA windowClass = {0};
-
-		void internalEventsProcess(){
-			foreach(w; windows)
-				w.processEvents();
-		}
+		WNDCLASSW windowClass = {0};
 
 		void load(string s)(){
 			auto ptr = wglGetProcAddress(s);
@@ -70,6 +65,15 @@ class Win32WindowManager: BaseWindowManager {
 			wglDeleteContext(dummyContext);
 			ReleaseDC(dummyWindow, dummyDeviceContext);
 			DestroyWindow(dummyWindow);
+
+			windowClass.lpfnWndProc = cast(WNDPROC)&internalEvents;
+			windowClass.hInstance = appInstance;
+			windowClass.hIcon = LoadIconA(null, IDI_APPLICATION);
+			windowClass.hCursor = LoadCursorA(null, IDC_ARROW);
+			windowClass.hbrBackground = cast(HBRUSH)GetStockObject(BLACK_BRUSH);
+			windowClass.lpszClassName = "wm::windowClass".toUTF16z();
+			windowClass.style = CS_OWNDC;
+			RegisterClassW(&windowClass);
 		}
 
 	}
@@ -102,7 +106,8 @@ class Win32WindowManager: BaseWindowManager {
 				DispatchMessageA(&msg);
 			}
 		}
-		wm.internalEventsProcess();
+		foreach(w; windows)
+			w.processEvents();
 	}
 
 	override long[2] getCursorPos(){
@@ -155,14 +160,14 @@ protected:
 	static LRESULT internalEvents(HWND window, UINT msg, WPARAM wpar, LPARAM lpar) nothrow {
 		try {
 			foreach(w; cast(List!Win32Window)wm.windows)
-				if(w.handle == window){
-					try {
-						w.processEvent(Event(msg, wpar, lpar));
+				if(w.handle == window)
+					if(w.processEvent(Event(msg, wpar, lpar)))
 						return 0;
-					}catch(Exception){}
-				}
 			return DefWindowProcW(window, msg, wpar, lpar);
 		}catch(Throwable e){
+			try {
+				Log.warning(e.toString);
+			} catch(Exception){}
 			return 0;
 		}
 	}
