@@ -106,8 +106,6 @@ class Win32WindowManager: BaseWindowManager {
 				DispatchMessageA(&msg);
 			}
 		}
-		foreach(w; windows)
-			w.processEvents();
 	}
 
 	override long[2] getCursorPos(){
@@ -164,7 +162,7 @@ protected:
 					if(w.processEvent(Event(msg, wpar, lpar)))
 						return 0;
 			return DefWindowProcW(window, msg, wpar, lpar);
-		}catch(Throwable e){
+		}catch(Exception e){
 			try {
 				Log.warning(e.toString);
 			} catch(Exception){}

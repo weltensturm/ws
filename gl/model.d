@@ -28,6 +28,8 @@ class Model: Loadable {
 	Loader mainFinisher;
 
 	this(string p, Loader glFinisher, Loader mainFinisher){
+		assert(glFinisher);
+		assert(mainFinisher);
 		path = p;
 		glFinisher.run(&finish);
 		this.mainFinisher = mainFinisher;

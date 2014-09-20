@@ -31,21 +31,7 @@ class BaseWindow: Base {
 		return isActive;
 	}
 
-	void processEvents(){
-		foreach(i, e; eventQueue){
-			eventQueue.popFront();
-			if(isActive){
-				setActive();
-				processEvent(e);
-			}
-		}
-	}
-
 	void setActive(){
-		throw new Exception("Not implemented");
-	}
-
-	void processEvent(Event){
 		throw new Exception("Not implemented");
 	}
 
