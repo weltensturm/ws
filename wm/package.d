@@ -28,6 +28,7 @@ version(Posix){
 		ws.wm.x11.window,
 		ws.wm.x11.wm;
 	alias Window = X11Window;
+	alias WindowHandle = X11.Xlib.Window;
 	alias WindowManager = X11WindowManager;
 	alias GraphicsContext = GLXContext;
 	alias Event = XEvent;

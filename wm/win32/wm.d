@@ -156,8 +156,10 @@ protected:
 		try {
 			foreach(w; cast(List!Win32Window)wm.windows)
 				if(w.handle == window){
-					if(w.processEvent(Event(msg, wpar, lpar)))
+					try {
+						w.processEvent(Event(msg, wpar, lpar));
 						return 0;
+					}catch(Exception){}
 				}
 			return DefWindowProcW(window, msg, wpar, lpar);
 		}catch(Throwable e){

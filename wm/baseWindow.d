@@ -20,6 +20,10 @@ class BaseWindow: Base {
 		List!Event eventQueue;
 	}
 
+	this(){
+		eventQueue = new List!Event;
+	}
+
 	void onRawMouse(int x, int y){}
 
 	@property
@@ -41,7 +45,7 @@ class BaseWindow: Base {
 		throw new Exception("Not implemented");
 	}
 
-	bool processEvent(Event){
+	void processEvent(Event){
 		throw new Exception("Not implemented");
 	}
 

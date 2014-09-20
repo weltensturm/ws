@@ -225,7 +225,7 @@ class Win32Window: BaseWindow {
 		wm.activeWindow = this;
 	}
 
-	override bool processEvent(Event e){
+	override void processEvent(Event e){
 		switch(e.msg){
 			/+ Gamepads & Joysticks
 			case WM_CREATE: {
@@ -261,40 +261,41 @@ class Win32Window: BaseWindow {
 				if(input.header.dwType == RIM_TYPEMOUSE){
 					onRawMouse(input.mouse.lLastX, input.mouse.lLastY);
 				}
-				return true;
+				break;
 			}
 			case WM_PAINT:
 				shouldRedraw = false;
 				onDraw();
-				return true;
+				break;
 			case WM_SHOWWINDOW:
 				onShow();
-				return true;
+				break;
 			case WM_CLOSE:
 				hide();
-				return true;
+				break;
 			case WM_SIZE:
 				onResize(LOWORD(e.lpar),HIWORD(e.lpar));
 				size = [LOWORD(e.lpar),HIWORD(e.lpar)];
-				return true;
+				break;
 			case WM_KEYDOWN:
 				Keyboard.key c = cast(Keyboard.key)toLower(cast(char)e.wpar);
 				Keyboard.set(c, true);
 				onKeyboard(c, true);
-				return true;
+				break;
 			case WM_KEYUP:
 				auto c = cast(Keyboard.key)toLower(cast(char)e.wpar);
 				Keyboard.set(c, false);
 				onKeyboard(c, false);
-				return true;
+				break;
 			case WM_CHAR:
 				onKeyboard(cast(dchar)e.wpar);
-				return true;
+				break;
 			case WM_ACTIVATE:
-				onKeyboardFocus(LOWORD(e.wpar) > 0 ? true : false); return true;
+				onKeyboardFocus(LOWORD(e.wpar) > 0 ? true : false);
+				break;
 			case WM_SETCURSOR:
 				SetCursor(MOUSE_CURSOR_TO_HCUR[cast(int)cursor]);
-				return true;
+				break;
 			case WM_MOUSEMOVE:
 				if(!(parent && parent.mouseChild != this)){
 					TRACKMOUSEEVENT tme = {
@@ -304,36 +305,36 @@ class Win32Window: BaseWindow {
 					onMouseFocus(true);
 				}
 				onMouseMove(GET_X_LPARAM(e.lpar), size.y-GET_Y_LPARAM(e.lpar));
-				return true;
+				break;
 			case WM_MOUSELEAVE:
 				onMouseFocus(false);
-				return true;
+				break;
 			case WM_LBUTTONDOWN:
 				onMouseButton(Mouse.buttonLeft, true, LOWORD(e.lpar), HIWORD(e.lpar));
-				return true;
+				break;
 			case WM_LBUTTONUP:
 				onMouseButton(Mouse.buttonLeft, false, LOWORD(e.lpar), HIWORD(e.lpar));
-				return true;
+				break;
 			case WM_MBUTTONDOWN:
 				onMouseButton(Mouse.buttonMiddle, true, LOWORD(e.lpar), HIWORD(e.lpar));
-				return true;
+				break;
 			case WM_MBUTTONUP:
 				onMouseButton(Mouse.buttonMiddle, false, LOWORD(e.lpar), HIWORD(e.lpar));
-				return true;
+				break;
 			case WM_RBUTTONDOWN:
 				onMouseButton(Mouse.buttonRight, true, LOWORD(e.lpar), HIWORD(e.lpar));
-				return true;
+				break;
 			case WM_RBUTTONUP:
 				onMouseButton(Mouse.buttonRight, false, LOWORD(e.lpar), HIWORD(e.lpar));
-				return true;
+				break;
 			case WM_MOUSEWHEEL:
 				onMouseButton(
 						GET_WHEEL_DELTA_WPARAM(e.wpar) > 120 ? Mouse.wheelDown : Mouse.wheelUp,
 						true, LOWORD(e.lpar), HIWORD(e.lpar)
 				);
-				return true;
+				break;
 			default:
-				return false;
+				throw new Exception("no event handler");
 		}
 	}
 

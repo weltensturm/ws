@@ -28,18 +28,14 @@ class BaseWindowManager {
 		windows ~= window;
 	}
 
-	void addWindow(BaseWindow window){
-		windows ~= window;
-	}
-
 	void removeWindow(BaseWindow window){
 		windows.remove(window);
 	}
 
 	bool hasActiveWindows(){
 		int c;
-		foreach(i, w; windows)
-			if(w.active)
+		foreach(window; windows)
+			if(window.active)
 				c++; // ha ha
 		return c > 0;
 	}

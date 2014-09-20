@@ -25,12 +25,12 @@ class Model: Loadable {
 	string path;
 	BatchMaterial[] data;
 
-	Loader loader;
-	
-	this(string p, Loader l){
+	Loader mainFinisher;
+
+	this(string p, Loader glFinisher, Loader mainFinisher){
 		path = p;
-		loader = l;
-		loader.run(Loader.Where.Any, &finish);
+		glFinisher.run(&finish);
+		this.mainFinisher = mainFinisher;
 	}
 
 	bool isValid(){
@@ -95,7 +95,7 @@ class Model: Loadable {
 							}
 						}
 					}
-					loader.run(Loader.Where.Main, &mat.finish);
+					mainFinisher.run(&mat.finish);
 				}catch(Exception e){
 					Log.warning(e.toString());
 					mat = null;
@@ -114,7 +114,7 @@ class Model: Loadable {
 					auto b = new BatchMaterial;
 					data ~= b;
 					b.material = material;
-					loader.run(Loader.Where.Main, &b.finishBatch);
+					mainFinisher.run(&b.finishBatch);
 					b.finishMaterial(mdl);
 				}
 			}

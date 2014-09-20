@@ -15,6 +15,21 @@ __gshared:
 
 class X11Window: BaseWindow {
 
+	package {
+
+		List!Event eventQueue;
+		XIC inputContext;
+
+		WindowHandle windowHandle;
+		Context graphicsContext;
+	
+		Point pos, size;
+		bool shouldRedraw = false;
+		string title;
+		Mouse.cursor cursor = Mouse.cursor.inherit;
+		
+	}
+
 	this(WindowHandle handle){
 		windowHandle = handle;
 	}
@@ -22,7 +37,7 @@ class X11Window: BaseWindow {
 	this(int w, int h, string t){
 		title = t;
 		size = [w, h];
-		eventQueue = new List!XEvent;
+		eventQueue = new List!Event;
 		windowHandle = XCreateWindow(
 			wm.displayHandle,
 			XDefaultRootWindow(wm.displayHandle),
@@ -54,7 +69,6 @@ class X11Window: BaseWindow {
 		XMapWindow(wm.displayHandle, windowHandle);
 		activateGraphicsContext();
 		isActive = true;
-		wm.windows ~= this;
 	}
 	
 	
@@ -217,6 +231,44 @@ class X11Window: BaseWindow {
 	}
 	
 	
+	override void processEvent(Event e){
+		switch(e.type){
+			case ConfigureNotify:
+				if(size.x != e.xconfigure.width || size.y != e.xconfigure.height){
+					onResize(e.xconfigure.width, e.xconfigure.height);
+					size.x = e.xconfigure.width; size.y = e.xconfigure.height;
+				}
+				if(pos.x != e.xconfigure.x || pos.y != e.xconfigure.y){
+					onMove(e.xconfigure.x, e.xconfigure.y);
+					pos.x = e.xconfigure.x; pos.y = e.xconfigure.y;
+				}
+				break;
+			case KeyPress:
+				onKeyboard(cast(Keyboard.key)XLookupKeysym(&e.xkey,0), true);
+				char str[25];
+				size_t l = Xutf8LookupString(inputContext, &e.xkey, str.ptr, 25, null, null);
+				if(l){
+					string s;
+					for(size_t i=0; i<l; ++i)
+						s ~= str[i];
+					foreach(dchar c; s)
+						onKeyboard(c);
+				}
+				break;
+			case KeyRelease: onKeyboard(cast(Keyboard.key)XLookupKeysym(&e.xkey,0), false); break;
+			case MotionNotify: onMouseMove(e.xmotion.x, size.y - e.xmotion.y); break;
+			case ButtonPress: onMouseButton(e.xbutton.button, true, e.xbutton.x, e.xbutton.y); break;
+			case ButtonRelease: onMouseButton(e.xbutton.button, false, e.xbutton.x, e.xbutton.y); break;
+			case EnterNotify: onMouseFocus(true); break;
+			case LeaveNotify: onMouseFocus(false); break;
+			case Expose: shouldRedraw = false; onDraw(); break;
+			case ClientMessage: hide(); break;
+			case KeymapNotify: XRefreshKeyboardMapping(&e.xmapping); break;
+			default:break;
+		}
+	}
+
+
 	override void shouldCreateGraphicsContext(){
 		try {
 			createGraphicsContext();
@@ -247,20 +299,4 @@ class X11Window: BaseWindow {
 			assert(false, "Not implemented");
 	}
 	
-	package:
-
-		alias WindowHandle = X11.Xlib.Window;
-		List!XEvent eventQueue;
-		XIC inputContext;
-
-		WindowHandle windowHandle;
-		Context graphicsContext;
-	
-		Point pos, size;
-		bool isActive = false;
-		bool shouldRedraw = false;
-		string title;
-		Mouse.cursor cursor = Mouse.cursor.inherit;
-		
-		
 }

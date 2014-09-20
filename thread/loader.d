@@ -71,17 +71,27 @@ class Loadable {
 
 }
 
+alias void delegate() Function;
 
-class Loader {
+
+interface Loader {
+
+	void run(Function);
+
+}
+
+
+class LoaderQueue: Loader {
 	
-	void run(Where where, void delegate() fn){
-		final switch(where){
-			case Where.Main:
-				synchronized(this)
-					queue ~= fn;
-			break;
-			case Where.GL: threadGL.run(fn); break;
-			case Where.Any: threadAny.run(fn); break;
+	private List!Function queue;
+
+	this(){
+		queue = new List!Function;
+	}
+	
+	override void run(Function fn){
+		synchronized(this){
+			queue ~= fn;
 		}
 	}
 
@@ -89,79 +99,40 @@ class Loader {
 		if(queue.length){
 			Function fn;
 			synchronized(this){
-				//fn = queue[0];
-				//queue = queue[1..$];
 				fn = queue.popFront();
 			}
 			fn();
 		}
-				//queue.popFront()();
 	}
 
-	enum Where {
-		Main,
-		GL,
-		Any
-	}
+}
 
-	alias void delegate() Function;
-	
-	
-	private class LoaderThread {
 
-		List!Function queue;
-		Thread worker;
+class LoaderThread: LoaderQueue {
 
-		void run(Function cb){
-			synchronized(this)
-				queue ~= cb;
-		}
+	private Thread worker;
 
-		this(void delegate() precall){
-			queue = new List!Function;
-			worker = new Thread({
-				worker.priority = Thread.PRIORITY_MIN;
-				worker.isDaemon = true;
-				while(worker.isRunning && queue){
-					try {
-						while(worker.isRunning && queue && !queue.length)
-							worker.sleep(msecs(10));
-						if(!queue)
-							return;
-						Function cb;
-						synchronized(this)
-							cb = queue.popFront();
-						precall();
-						cb();
-					}catch(Throwable t)
-						Log.error("THREAD ERROR: " ~ t.toString());
-				}
-			});
-			worker.start();
-		}
-
-	}
-	
-	void stop(){
-		threadGL.queue = null;
-		threadAny.queue = null;
-	}
-	
-	//Function[] queue;
-	List!Function queue;
-	LoaderThread threadGL;
-	LoaderThread threadAny;
-
-	this(Window w, GraphicsContext c){
-		assert(w);
-		assert(c);
+	this(void delegate() precall){
 		queue = new List!Function;
-		threadGL = new LoaderThread({
-			w.makeCurrent(c);
+		worker = new Thread({
+			worker.priority = Thread.PRIORITY_MIN;
+			worker.isDaemon = true;
+			while(worker.isRunning && queue){
+				try {
+					while(worker.isRunning && queue && !queue.length)
+						worker.sleep(msecs(10));
+					if(!queue)
+						return;
+					Function cb;
+					synchronized(this)
+						cb = queue.popFront();
+					precall();
+					cb();
+				}catch(Throwable t)
+					Log.error("THREAD ERROR: " ~ t.toString());
+			}
 		});
-		threadAny = new LoaderThread({});
-
-
+		worker.start();
 	}
-	
+
 }
