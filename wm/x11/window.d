@@ -4,6 +4,7 @@ version(Posix):
 
 import
 	std.conv,
+	std.string,
 	ws.wm,
 	ws.list,
 	derelict.opengl3.gl3,
@@ -17,20 +18,12 @@ class X11Window: BaseWindow {
 
 	package {
 
-		List!Event eventQueue;
 		XIC inputContext;
-
-		WindowHandle windowHandle;
-		Context graphicsContext;
-	
-		Point pos, size;
-		bool shouldRedraw = false;
-		string title;
-		Mouse.cursor cursor = Mouse.cursor.inherit;
 		
 	}
 
 	this(WindowHandle handle){
+		assert(handle);
 		windowHandle = handle;
 	}
 
@@ -60,12 +53,14 @@ class X11Window: BaseWindow {
 		XSetWMProtocols(wm.displayHandle, windowHandle, &wmDelete, 1);
 		shouldCreateGraphicsContext();
 		show();
+		assert(windowHandle);
 	}
 
 	
 	override void show(){
 		if(isActive)
 			return;
+		wm.add(this);
 		XMapWindow(wm.displayHandle, windowHandle);
 		activateGraphicsContext();
 		isActive = true;
@@ -164,7 +159,7 @@ class X11Window: BaseWindow {
 		if(!isActive)
 			return;
 		XTextProperty tp;
-		char* c = cast(char*)title;
+		char* c = cast(char*)title.toStringz;
 		XStringListToTextProperty(&c, 1, &tp);
 		XSetWMName(wm.displayHandle, windowHandle, &tp);
 	}
@@ -173,7 +168,7 @@ class X11Window: BaseWindow {
 		Atom netWmName, utf8, actType;
 		ulong nItems, bytes;
 		int actFormat;
-		byte* data;
+		ubyte* data;
 		netWmName = XInternAtom(wm.displayHandle, "_NET_WM_NAME", False);
 		utf8 = XInternAtom(wm.displayHandle, "UTF8_STRING", False);
 		
@@ -256,12 +251,15 @@ class X11Window: BaseWindow {
 				}
 				break;
 			case KeyRelease: onKeyboard(cast(Keyboard.key)XLookupKeysym(&e.xkey,0), false); break;
-			case MotionNotify: onMouseMove(e.xmotion.x, size.y - e.xmotion.y); break;
+			case MotionNotify:
+				onMouseMove(e.xmotion.x, size.y - e.xmotion.y);
+				//onRawMouse(e.xmotion.x - size.x/2, size.y/2 - e.xmotion.y);
+				break;
 			case ButtonPress: onMouseButton(e.xbutton.button, true, e.xbutton.x, e.xbutton.y); break;
 			case ButtonRelease: onMouseButton(e.xbutton.button, false, e.xbutton.x, e.xbutton.y); break;
 			case EnterNotify: onMouseFocus(true); break;
 			case LeaveNotify: onMouseFocus(false); break;
-			case Expose: shouldRedraw = false; onDraw(); break;
+			case Expose: onDraw(); break;
 			case ClientMessage: hide(); break;
 			case KeymapNotify: XRefreshKeyboardMapping(&e.xmapping); break;
 			default:break;

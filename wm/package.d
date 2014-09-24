@@ -19,7 +19,6 @@ version(Windows){
 	alias GraphicsContext = Context;
 }
 version(Posix){
-	import X11.Xlib;
 	pragma(lib, "DerelictGL3");
 	pragma(lib, "DerelictUtil");
 	pragma(lib, "dl");
@@ -28,7 +27,7 @@ version(Posix){
 		ws.wm.x11.window,
 		ws.wm.x11.wm;
 	alias Window = X11Window;
-	alias WindowHandle = X11.Xlib.Window;
+	alias WindowHandle = ws.wm.x11.api.Window;
 	alias WindowManager = X11WindowManager;
 	alias GraphicsContext = GLXContext;
 	alias Event = XEvent;

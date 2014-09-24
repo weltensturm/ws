@@ -31,6 +31,10 @@ class BaseWindow: Base {
 		return isActive;
 	}
 
+	void processEvent(Event){
+		throw new Exception("Not implemented");
+	}
+
 	void setActive(){
 		throw new Exception("Not implemented");
 	}

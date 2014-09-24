@@ -44,7 +44,7 @@ class BaseWindowManager {
 		return activeWindow;
 	}
 
-	void processEvents(bool noblock = true){
+	void processEvents(){
 		assert(false, "Not implemented");
 	}
 

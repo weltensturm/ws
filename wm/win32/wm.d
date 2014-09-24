@@ -92,20 +92,17 @@ class Win32WindowManager: BaseWindowManager {
 		return list;
 	}
 
-	override void processEvents(bool noblock = true){
-		if(noblock){
-			MSG msg;
-			while(PeekMessageA(&msg, null, 0, 0, PM_REMOVE)){
-				TranslateMessage(&msg);
-				DispatchMessageA(&msg);
-			}
-		}else{
-			MSG msg;
-			if(GetMessageA(&msg, null, 0, 0)){
-				TranslateMessage(&msg);
-				DispatchMessageA(&msg);
-			}
+	override void processEvents(){
+		MSG msg;
+		while(PeekMessageA(&msg, null, 0, 0, PM_REMOVE)){
+			TranslateMessage(&msg);
+			DispatchMessageA(&msg);
 		}
+		foreach(window; windows)
+			foreach(event; window.eventQueue){
+				window.eventQueue.popFront;
+				window.processEvent(event);
+			}
 	}
 
 	override long[2] getCursorPos(){
@@ -159,14 +156,10 @@ protected:
 		try {
 			foreach(w; cast(List!Win32Window)wm.windows)
 				if(w.handle == window)
-					if(w.processEvent(Event(msg, wpar, lpar)))
-						return 0;
-			return DefWindowProcW(window, msg, wpar, lpar);
-		}catch(Exception e){
-			try {
-				Log.warning(e.toString);
-			} catch(Exception){}
-			return 0;
+					w.addEvent(Event(msg, wpar, lpar));
+		} catch(Throwable){
+			assert(0);
 		}
+		return DefWindowProcW(window, msg, wpar, lpar);
 	}
 

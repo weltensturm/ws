@@ -12,10 +12,15 @@ import
 	ws.wm.baseWindowManager;
 
 
-static X11WindowManager wm;
+__gshared:
 
-static this(){
-	wm = new X11WindowManager;
+
+
+static wm(){
+	static X11WindowManager _wm;
+	if(!_wm)
+		_wm = new X11WindowManager;
+	return _wm;
 }
 
 class X11WindowManager: BaseWindowManager {
@@ -30,20 +35,9 @@ class X11WindowManager: BaseWindowManager {
 		GLXFBConfig* mFBConfig;
 		T_glXCreateContextAttribsARB glXCreateContextAttribsARB;
 
-		void internalEventsProcess(){
-
-			foreach(w; windows){
-				foreach(e; w.eventQueue){
-					w.eventQueue.popFront();
-					activeWindow = w;
-					w.activateGraphicsContext();
-					w.processEvent(e);
-				}
-			}
-		}
-
 
 		this(){
+			import ws.io; writeln(XEvent.sizeof);
 			super();
 			DerelictGL3.load();
 			displayHandle = XOpenDisplay(null);
@@ -98,14 +92,15 @@ class X11WindowManager: BaseWindowManager {
 		
 	}
 
-	override void processEvents(bool noblock){
+	override void processEvents(){
 		while(XPending(wm.displayHandle)){
 			XEvent e;
 			XNextEvent(wm.displayHandle, &e);
 			foreach(win; wm.windows){
 				if(e.xany.window == win.windowHandle && win.isActive){
-					win.eventQueue ~= e;
-					wm.internalEventsProcess();
+					activeWindow = win;
+					win.activateGraphicsContext();
+					win.processEvent(e);
 				}
 			}
 		}
