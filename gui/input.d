@@ -61,8 +61,8 @@ static class Mouse {
 			button button4 = 5;
 			button button5 = 6;
 		}
-		int X = 200;
-		int Y = 201;
+		int X = 5500;
+		int Y = 5501;
 	}
 	
 	enum cursor {

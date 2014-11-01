@@ -38,6 +38,10 @@ class Button: Base {
 		return m_font_size;
 	}
 
+	@property void text(string s){
+		title.text.set(s);
+	}
+
 	this(string t){
 		leftClick = new Event!();
 		rightClick = new Event!();

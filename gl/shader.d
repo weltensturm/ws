@@ -24,11 +24,15 @@ class Shader: Loadable {
 	public:
 	
 
-		static Shader load(Args...)(Args args){
-			string id = args[0] ~ tostring(args[1..$]);
+		static Shader load(string dir, string[uint] attr, string[uint] frag=null){
+			string id = dir ~ tostring(attr) ~ tostring(frag);
+			if(id in shaderContainer)
+				return shaderContainer[id];
 			auto shader = prepare(id);
-			shader.start(args[0]);
-			shader.addAttribute(args[1..$]);
+			shader.start(dir);
+			shader.bindAttr(attr);
+			if(frag)
+				shader.bindFrag(frag);
 			shader.finish();
 			return shader;
 		}
@@ -82,6 +86,7 @@ class Shader: Loadable {
 
 
 		void start(string name, string vertex, string fragment){
+			assert(!valid);
 			try {
 				if(failed) return;
 				this.name = name;
@@ -107,10 +112,15 @@ class Shader: Loadable {
 		}
 
 
-		void addAttribute(Args...)(uint id, string name, Args args){
-			glBindAttribLocation(program.program, id, name.toStringz());
-			static if(args.length > 0)
-				addAttribute(args);
+		void bindAttr(string[uint] attrs){
+			foreach(i, name; attrs)
+				glBindAttribLocation(program.program, i, name.toStringz);
+		}
+
+
+		void bindFrag(string[uint] frags){
+			foreach(i, name; frags)
+				glBindFragDataLocation(program.program, i, name.toStringz());
 		}
 
 

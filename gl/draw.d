@@ -136,7 +136,7 @@ class draw {
 						batchRectTexture.addPoint([1, 1, 0], [1,1]);
 						batchRectTexture.addPoint([0, 1, 0], [0,1]);
 						batchRectTexture.finish();
-						shaders[t] = Shader.load("2d_texture", gl.attributeVertex, "vVertex", gl.attributeTexture, "vTexture0");
+						shaders[t] = Shader.load("2d_texture", [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"]);
 						break;
 					case type.rect:
 						batchRect = new Batch;
@@ -146,7 +146,7 @@ class draw {
 						batchRect.add([1, 1, 0]);
 						batchRect.add([0, 1, 0]);
 						batchRect.finish();
-						shaders[t] = Shader.load("2d_rect", gl.attributeVertex, "vVertex");
+						shaders[t] = Shader.load("2d_rect", [gl.attributeVertex: "vVertex"]);
 						break;
 					case type.line:
 						batchLine = new Batch;
@@ -154,10 +154,10 @@ class draw {
 						batchLine.add([0,0,0]);
 						batchLine.add([0,10,0]);
 						batchLine.finish();
-						shaders[t] = Shader.load("2d_rect", gl.attributeVertex, "vVertex");
+						shaders[t] = Shader.load("2d_rect", [gl.attributeVertex: "vVertex"]);
 						break;
 					case type.text:
-						shaders[t] = Shader.load("2d_texture", gl.attributeVertex, "vVertex", gl.attributeTexture, "vTexture0");
+						shaders[t] = Shader.load("2d_texture", [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"]);
 				}
 			}
 			shaders[t].use();

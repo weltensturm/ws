@@ -4,33 +4,34 @@ version(Posix):
 
 import
 	std.conv,
+	std.string,
 	ws.wm,
+	ws.gui.base,
 	ws.list,
 	derelict.opengl3.gl3,
-	ws.wm.baseWindow,
 	ws.wm.x11.api;
 
 __gshared:
 
 
-class X11Window: BaseWindow {
+class X11Window: Base {
 
 	package {
-
-		List!Event eventQueue;
-		XIC inputContext;
-
-		WindowHandle windowHandle;
-		Context graphicsContext;
-	
-		Point pos, size;
-		bool shouldRedraw = false;
-		string title;
 		Mouse.cursor cursor = Mouse.cursor.inherit;
-		
+		string title;
+		bool isActive = false;
+		WindowHandle windowHandle;
+		GraphicsContext graphicsContext;
+		List!Event eventQueue;
+
+		XIC inputContext;
+		int oldX, oldY;
+		int jumpTargetX, jumpTargetY;
+
 	}
 
 	this(WindowHandle handle){
+		assert(handle);
 		windowHandle = handle;
 	}
 
@@ -60,12 +61,14 @@ class X11Window: BaseWindow {
 		XSetWMProtocols(wm.displayHandle, windowHandle, &wmDelete, 1);
 		shouldCreateGraphicsContext();
 		show();
+		assert(windowHandle);
 	}
 
 	
 	override void show(){
 		if(isActive)
 			return;
+		wm.add(this);
 		XMapWindow(wm.displayHandle, windowHandle);
 		activateGraphicsContext();
 		isActive = true;
@@ -80,10 +83,17 @@ class X11Window: BaseWindow {
 		wm.windows.remove(this);
 	}
 	
-	override void swapBuffers(){
+	void swapBuffers(){
 		glXSwapBuffers(wm.displayHandle, cast(uint)windowHandle);
 	}
-	
+
+	@property
+	bool active(){
+		return isActive;
+	}
+
+	void onRawMouse(int x, int y){}
+
 
 	override void setCursor(Mouse.cursor cursor){
 		struct cursorCacheEntry {
@@ -151,7 +161,9 @@ class X11Window: BaseWindow {
 	}
 
 
-	override void setCursorPos(int x, int y){
+	void setCursorPos(int x, int y){
+		jumpTargetX = x;
+		jumpTargetY = y;
 		XWarpPointer(
 				wm.displayHandle, XDefaultRootWindow(wm.displayHandle),
 				windowHandle, 0,0,0,0, x, size.y - y
@@ -159,21 +171,21 @@ class X11Window: BaseWindow {
 		XFlush(wm.displayHandle);
 	}
 
-	override void setTitle(string t){
+	void setTitle(string t){
 		title = t;
 		if(!isActive)
 			return;
 		XTextProperty tp;
-		char* c = cast(char*)title;
+		char* c = cast(char*)title.toStringz;
 		XStringListToTextProperty(&c, 1, &tp);
 		XSetWMName(wm.displayHandle, windowHandle, &tp);
 	}
 
-	override string getTitle(){
+	string getTitle(){
 		Atom netWmName, utf8, actType;
 		ulong nItems, bytes;
 		int actFormat;
-		byte* data;
+		ubyte* data;
 		netWmName = XInternAtom(wm.displayHandle, "_NET_WM_NAME", False);
 		utf8 = XInternAtom(wm.displayHandle, "UTF8_STRING", False);
 		
@@ -184,12 +196,12 @@ class X11Window: BaseWindow {
 		return to!string(data);
 	}
 	
-	override Context shareContext(){
+	Context shareContext(){
 		return glXCreateContext(wm.displayHandle, wm.graphicsInfo, graphicsContext, True);
 	}
 
 
-	override void makeCurrent(Context c){
+	void makeCurrent(Context c){
 		version(Windows){
 		}version(Posix){
 			glXMakeCurrent(wm.displayHandle, windowHandle, c);
@@ -197,7 +209,7 @@ class X11Window: BaseWindow {
 	}
 
 
-	override void createGraphicsContext(){
+	void createGraphicsContext(){
 		version(Windows){
 		}version(Posix){
 			if(!wm.glCore)
@@ -216,7 +228,7 @@ class X11Window: BaseWindow {
 	}
 	
 	
-	override void createGraphicsContextOld(){
+	void createGraphicsContextOld(){
 		version(Windows){
 		}version(Posix){
 			/+wm.glCore = false;
@@ -231,7 +243,7 @@ class X11Window: BaseWindow {
 	}
 	
 	
-	override void processEvent(Event e){
+	void processEvent(Event e){
 		switch(e.type){
 			case ConfigureNotify:
 				if(size.x != e.xconfigure.width || size.y != e.xconfigure.height){
@@ -256,12 +268,22 @@ class X11Window: BaseWindow {
 				}
 				break;
 			case KeyRelease: onKeyboard(cast(Keyboard.key)XLookupKeysym(&e.xkey,0), false); break;
-			case MotionNotify: onMouseMove(e.xmotion.x, size.y - e.xmotion.y); break;
+			case MotionNotify:
+				onMouseMove(e.xmotion.x, size.y - e.xmotion.y);
+				if(e.xmotion.x != jumpTargetX || e.xmotion.y != jumpTargetY)
+					onRawMouse((e.xmotion.x - oldX), (e.xmotion.y - oldY));
+				else{
+					jumpTargetX = int.max;
+					jumpTargetY = int.max;
+				}
+				oldX = e.xmotion.x;
+				oldY = e.xmotion.y;
+				break;
 			case ButtonPress: onMouseButton(e.xbutton.button, true, e.xbutton.x, e.xbutton.y); break;
 			case ButtonRelease: onMouseButton(e.xbutton.button, false, e.xbutton.x, e.xbutton.y); break;
 			case EnterNotify: onMouseFocus(true); break;
 			case LeaveNotify: onMouseFocus(false); break;
-			case Expose: shouldRedraw = false; onDraw(); break;
+			case Expose: onDraw(); break;
 			case ClientMessage: hide(); break;
 			case KeymapNotify: XRefreshKeyboardMapping(&e.xmapping); break;
 			default:break;
@@ -269,7 +291,7 @@ class X11Window: BaseWindow {
 	}
 
 
-	override void shouldCreateGraphicsContext(){
+	void shouldCreateGraphicsContext(){
 		try {
 			createGraphicsContext();
 		}catch(Exception e){
@@ -281,13 +303,13 @@ class X11Window: BaseWindow {
 	}
 	
 	
-	override void activateGraphicsContext(){
+	void activateGraphicsContext(){
 		if(!wm.activeWindow)
 			wm.activeWindow = this;
 		makeCurrent(graphicsContext);
 	}
 
-	override long[2] getScreenSize(){
+	long[2] getScreenSize(){
 		version(Windows){
 			RECT size;
 			GetWindowRect(windowHandle, &size);

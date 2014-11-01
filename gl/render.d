@@ -17,13 +17,13 @@ class Render {
 		lineBatch.add([0,0,0]);
 		lineBatch.add([1,1,1]);
 		lineBatch.finish();
-		lineShader = Shader.load("3d_line", gl.attributeVertex, "vertex");
+		lineShader = Shader.load("3d_line", [gl.attributeVertex: "vertex"]);
 	}
 
 	void line(Vector!3 from, Vector!3 to){
 		lineShader.use(
 			"matMVP", getMvp(),
-			"offset", from ~ 0.5, // TODO: find out why
+			"offset", from ~ 0.5,
 			"scale", (to - from) ~ 0.5,
 			"color", m_color
 		);

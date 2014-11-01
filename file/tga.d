@@ -1,7 +1,13 @@
 
 module ws.file.tga;
 
-import std.file, std.c.string, ws.string, ws.exception;
+import
+	std.file,
+	std.string,
+	std.c.string,
+	std.zlib,
+	ws.string,
+	ws.exception;
 
 class TGA {
 	
@@ -11,7 +17,13 @@ class TGA {
 	
 	void load(string path){
 		try {
-			auto file = read(path);
+			const(void)[] file;
+			if(exists(path ~ ".gz")){
+				auto uc = new UnCompress(HeaderFormat.gzip);
+				file = uc.uncompress(read(path ~ ".gz"));
+				file ~= uc.flush();
+			}else
+				file = read(path);
 			size_t cursor = 18;
 			TGAHEADER header;
 			memcpy(&header, file.ptr, cursor);
@@ -26,6 +38,9 @@ class TGA {
 
 			if(header.identsize)
 				cursor += header.identsize/8;
+
+			if(data.length < cursor + width * height * depth)
+				exception("%s is too small".format(path));
 
 			data = cast(byte[])file[cursor..cast(uint)(cursor + width * height * depth)];
 		}catch(FileException e){

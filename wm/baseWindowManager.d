@@ -2,7 +2,8 @@ module ws.wm.baseWindowManager;
 
 import
 	ws.list,
-	ws.wm.baseWindow;
+	ws.wm,
+	ws.gui.input;
 
  
 class WindowNotFound: Exception {
@@ -16,19 +17,19 @@ class WindowNotFound: Exception {
 class BaseWindowManager {
 	
 	package {
-		BaseWindow activeWindow;
-		List!BaseWindow windows;
+		Window activeWindow;
+		List!Window windows;
 	}
 
 	this(){
-		windows = new List!BaseWindow;
+		windows = new List!Window;
 	}
 
-	void add(BaseWindow window){
+	void add(Window window){
 		windows ~= window;
 	}
 
-	void removeWindow(BaseWindow window){
+	void removeWindow(Window window){
 		windows.remove(window);
 	}
 
@@ -40,32 +41,8 @@ class BaseWindowManager {
 		return c > 0;
 	}
 
-	BaseWindow active(){
+	Window active(){
 		return activeWindow;
-	}
-
-	void processEvents(bool noblock = true){
-		assert(false, "Not implemented");
-	}
-
-	void setTop(BaseWindow win){
-		assert(false, "Not implemented");
-	}
-
-	long[2] getCursorPos(){
-		assert(false, "Not implemented");
-	}
-
-	bool isKeyDown(Keyboard.key key){
-		assert(false, "Not implemented");
-	}
-
-	BaseWindow[] systemWindows(){
-		assert(false, "Not implemented");
-	}
-
-	BaseWindow findWindow(string title){
-		assert(false, "Not implemented");
 	}
 
 }

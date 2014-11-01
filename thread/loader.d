@@ -119,7 +119,7 @@ class LoaderThread: LoaderQueue {
 			worker.isDaemon = true;
 			while(worker.isRunning && queue){
 				try {
-					while(worker.isRunning && queue && !queue.length)
+					while(worker && worker.isRunning && queue && !queue.length)
 						worker.sleep(msecs(10));
 					if(!queue)
 						return;

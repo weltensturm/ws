@@ -22,7 +22,7 @@ class Text: Base {
 		style.bg.normal = [0, 0, 0, 0.5];
 		style.fg.normal = [1, 1, 1, 1];
 		text = new String;
-		shader = Shader.load("2d_texture", gl.attributeVertex, "vVertex", gl.attributeTexture, "vTexture0");
+		shader = Shader.load("2d_texture", [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"]);
 		setFont("sans", 11);
 	}
 
@@ -43,8 +43,7 @@ class Text: Base {
 			text ~= text.queue;
 			text.queue = "";
 		}
-		//draw.setColor(style.bg.normal);
-		//draw.rect(pos, size);
+		glActiveTexture(GL_TEXTURE0);
 		shader.use();
 		shader["Screen"].set(draw.screen);
 		shader["Image"].set(0);
@@ -138,7 +137,7 @@ class Text: Base {
 				it = it.next;
 			}
 		}
-	
+		
 		struct Cursor {
 			Iterator prev;
 			Iterator next;

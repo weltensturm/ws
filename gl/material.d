@@ -168,6 +168,16 @@ class Material: Loadable {
 			name ~ ' ' ~ to!string(shader.partsVertex) ~ ' ' ~ to!string(shader.partsFragment);
 	}
 
+	void activateTextures(){
+		int curtex = 0;
+		foreach(u; globals){
+			if(u.type == MaterialUniform.Type.tex){
+				glActiveTexture(GL_TEXTURE0 + curtex);
+				glBindTexture(GL_TEXTURE_2D, u.data.tex.id);
+			}
+		}
+	}
+
 	protected:
 
 		string name;
@@ -205,7 +215,7 @@ class Material: Loadable {
 					program.attach(new gl.Shader(gl.shaderFragment, buildFragment()));
 
 					foreach(s,i; attributes)
-						addAttribute(i,s);
+						bindAttr([i: s]);
 					super.finish();
 				}catch(Exception e)
 					exception("Failed to finish material \"" ~ name ~ "\"", e);

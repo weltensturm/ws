@@ -4,46 +4,21 @@ version(Posix):
 
 import
 	derelict.opengl3.gl,
+	ws.wm,
 	ws.wm.baseWindowManager,
 	ws.wm.x11.api,
 	ws.wm.x11.window,
 	ws.list,
-	ws.wm.baseWindow,
 	ws.wm.baseWindowManager;
 
 
-static X11WindowManager wm;
+__gshared:
 
-static this(){
-	wm = new X11WindowManager;
-}
 
 class X11WindowManager: BaseWindowManager {
 
-	package {
-		Display* displayHandle;
-		XVisualInfo* graphicsInfo;
-		XSetWindowAttributes windowAttributes;
-		long windowMask;
-		long eventMask;
-		bool glCore;
-		GLXFBConfig* mFBConfig;
-		T_glXCreateContextAttribsARB glXCreateContextAttribsARB;
-
-		void internalEventsProcess(){
-
-			foreach(w; windows){
-				foreach(e; w.eventQueue){
-					w.eventQueue.popFront();
-					activeWindow = w;
-					w.activateGraphicsContext();
-					w.processEvent(e);
-				}
-			}
-		}
-
-
 		this(){
+			import ws.io; writeln(XEvent.sizeof);
 			super();
 			DerelictGL3.load();
 			displayHandle = XOpenDisplay(null);
@@ -91,6 +66,17 @@ class X11WindowManager: BaseWindowManager {
 					graphicsInfo.visual, AllocNone
 			);
 		}
+
+	package {
+		Display* displayHandle;
+		XVisualInfo* graphicsInfo;
+		XSetWindowAttributes windowAttributes;
+		long windowMask;
+		long eventMask;
+		bool glCore;
+		GLXFBConfig* mFBConfig;
+		T_glXCreateContextAttribsARB glXCreateContextAttribsARB;
+
 		
 		~this(){
 			XCloseDisplay(displayHandle);
@@ -98,14 +84,15 @@ class X11WindowManager: BaseWindowManager {
 		
 	}
 
-	override void processEvents(bool noblock){
+	void processEvents(){
 		while(XPending(wm.displayHandle)){
 			XEvent e;
 			XNextEvent(wm.displayHandle, &e);
 			foreach(win; wm.windows){
 				if(e.xany.window == win.windowHandle && win.isActive){
-					win.eventQueue ~= e;
-					wm.internalEventsProcess();
+					activeWindow = win;
+					win.activateGraphicsContext();
+					win.processEvent(e);
 				}
 			}
 		}

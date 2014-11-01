@@ -9,36 +9,41 @@ import
 
 	ws.string,
 	ws.list,
-	ws.wm.baseWindow,
+	ws.gui.base,
 	ws.wm.win32.api,
-	ws.wm.win32.wm;
+	ws.wm.win32.wm,
+	ws.wm;
 
 __gshared:
 
 
-class Win32Window: BaseWindow {
+class Win32Window: Base {
 
-	protected {
+	package {
+		Mouse.cursor cursor = Mouse.cursor.inherit;
+		string title;
+		bool isActive = false;
+		WindowHandle windowHandle;
+		GraphicsContext graphicsContext;
+		List!Event eventQueue;
+
 		int antiAliasing = 1;
 		HDC deviceContext;
-	
-		bool shouldRedraw = false;
+
+		alias CB = void delegate(Event);
+		CB[int] eventHandlers;
+
+		int lastX, lastY, jumpX, jumpY;
+
+		bool hasMouse;
 	}
 
 	this(WindowHandle handle){
 		windowHandle = handle;
 	}
 
-	@property
-	WindowHandle handle(){
-		return windowHandle;
-	}
-
-	void addEvent(Event e){
-		eventQueue ~= e;
-	}
-
 	this(int w, int h, string t){
+		initializeHandlers;
 		wm.add(this);
 		title = t;
 		size = [w, h];
@@ -57,6 +62,9 @@ class Win32Window: BaseWindow {
 		GetWindowRect(windowHandle, &r);
 		pos = [r.left, r.right];
 
+		shouldCreateGraphicsContext();
+		show();
+
 		RAWINPUTDEVICE rawMouseDevice;
 		rawMouseDevice.usUsagePage = 0x01; 
 		rawMouseDevice.usUsage = 0x02;
@@ -64,9 +72,16 @@ class Win32Window: BaseWindow {
 		rawMouseDevice.hwndTarget = windowHandle;
 		if(!RegisterRawInputDevices(&rawMouseDevice, 1, RAWINPUTDEVICE.sizeof))
 			throw new Exception("Failed to register RID");
+	}
 
-		shouldCreateGraphicsContext();
-		show();
+	@property
+	bool active(){
+		return isActive;
+	}
+
+	@property
+	WindowHandle handle(){
+		return windowHandle;
 	}
 
 	override void show(){
@@ -77,7 +92,7 @@ class Win32Window: BaseWindow {
 		activateGraphicsContext();
 		isActive = true;
 	}
-																							
+
 	override void hide(){
 		if(!isActive)
 			return;
@@ -85,36 +100,25 @@ class Win32Window: BaseWindow {
 		isActive = false;
 	}
 
-	override void setTitle(string title){
+	void setTitle(string title){
 		this.title = title;
 		if(isActive)
 			SetWindowTextW(windowHandle, title.toUTF16z());
 	}
 
-	override string getTitle(){
+	string getTitle(){
 		wchar[512] str;
 		int r = GetWindowTextW(windowHandle, str.ptr, str.length);
 		return to!string(str[0..r]);
 	}
 
-	override long getPid(){
+	long getPid(){
 		DWORD pid;
 		DWORD threadId = GetWindowThreadProcessId(windowHandle, &pid);
 		return pid;
 	}
 	
-	bool _focus = false;
-
-	@property
-	override bool hasFocus(){
-		return _focus;
-	}
-
-	override void onKeyboardFocus(bool b){
-		_focus = b;
-	}
-
-	override void createGraphicsContext(){
+	void createGraphicsContext(){
 		deviceContext = GetDC(windowHandle);
 		if(!deviceContext)
 			throw new Exception("window.Show failed: GetDC");
@@ -150,7 +154,7 @@ class Win32Window: BaseWindow {
 			throw new Exception(tostring("wglCreateContextAttribsARB() failed: ", glGetError()));
 	}
 
-	override void createGraphicsContextOld(){
+	void createGraphicsContextOld(){
 		PIXELFORMATDESCRIPTOR pfd = {
 			(PIXELFORMATDESCRIPTOR).sizeof, 1, 4 | 32 | 1, 0, 8, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 0, 0, 0, 0, 0, 0
@@ -161,7 +165,7 @@ class Win32Window: BaseWindow {
 		wglMakeCurrent(deviceContext, graphicsContext);
 	}
 
-	override void shouldCreateGraphicsContext(){
+	void shouldCreateGraphicsContext(){
 		try
 			createGraphicsContext();
 		catch
@@ -170,30 +174,35 @@ class Win32Window: BaseWindow {
 		DerelictGL3.reload();
 	}
 
-	override void makeCurrent(Context context){
+	void makeCurrent(Context context){
 		if(!wglMakeCurrent(deviceContext, context))
 			throw new Exception("Failed to activate context, " ~ getLastError());
 	}
 
-	override void activateGraphicsContext(){
+	void activateGraphicsContext(){
 		if(!wm.activeWindow)
 			wm.activeWindow = this;
 		makeCurrent(graphicsContext);
 	}
 
-	override Context shareContext(){
+	Context shareContext(){
 		auto c = wm.wglCreateContextAttribsARB(deviceContext, graphicsContext, null);
 		if(!c)
 			throw new Exception("Failed to create shared context, " ~ getLastError());
 		return c;
 	}
 
-	override void swapBuffers(){
+	void swapBuffers(){
 		if(!wm.activeWindow)
 			return;
 		SwapBuffers(deviceContext);
 	}
 
+	void onRawMouse(int x, int y){}
+
+	void setActive(){
+		wm.activeWindow = this;
+	}
 
 	override void setCursor(Mouse.cursor cursor){
 		version(Windows){
@@ -206,7 +215,9 @@ class Win32Window: BaseWindow {
 		}
 	}
 
-	override void setCursorPos(int x, int y){
+	void setCursorPos(int x, int y){
+		lastX = x;
+		lastY = y;
 		POINT p = {cast(long)x, cast(long)y};
 		ClientToScreen(windowHandle, &p);
 		SetCursorPos(p.x, p.y);
@@ -223,24 +234,10 @@ class Win32Window: BaseWindow {
 	}
 	+/
 
-	override void setActive(){
-		wm.activeWindow = this;
-	}
-
-	bool processEvent(Event e){
-		switch(e.msg){
-			/+ Gamepads & Joysticks
-			case WM_CREATE: {
-				RAWINPUTDEVICE rid;
-				rid.usUsagePage = 1;
-				rid.usUsage	 = 4; // Joystick
-				rid.dwFlags	 = 0;
-				rid.hwndTarget  = hWnd;
-				if(!RegisterRawInputDevices(&rid, 1, sizeof(RAWINPUTDEVICE)))
-					return -1;
-				return true;
-			}
-			case WM_INPUT: {
+	void initializeHandlers(){
+		eventHandlers = [
+			/+
+			WM_INPUT: {
 				PRAWINPUT pRawInput;
 				UINT	  bufferSize;
 				HANDLE	hHeap;
@@ -254,90 +251,103 @@ class Win32Window: BaseWindow {
 				pRawInput, &bufferSize, sizeof(RAWINPUTHEADER));
 				ParseRawInput(pRawInput);
 				HeapFree(hHeap, 0, pRawInput);
-			}
+			},
 			+/
-			case WM_INPUT: {
+			WM_INPUT: (e){
 				RAWINPUT input;
 				UINT bufferSize = RAWINPUT.sizeof;
 				GetRawInputData(cast(HRAWINPUT)e.lpar, RID_INPUT, &input, &bufferSize, RAWINPUTHEADER.sizeof);
+				//import ws.io; writeln(cast(byte[RAWINPUT.sizeof])input);
+				/+
 				if(input.header.dwType == RIM_TYPEMOUSE){
 					onRawMouse(input.mouse.lLastX, input.mouse.lLastY);
 				}
-				return true;
-			}
-			case WM_PAINT:
-				shouldRedraw = false;
-				onDraw();
-				return true;
-			case WM_SHOWWINDOW:
-				onShow();
-				return true;
-			case WM_CLOSE:
-				hide();
-				return true;
-			case WM_SIZE:
+				+/
+			},
+			//WM_PAINT: (e){},
+			WM_SHOWWINDOW: (e){ onShow; },
+			WM_CLOSE: (e){ hide; },
+			WM_SIZE: (e){
 				onResize(LOWORD(e.lpar),HIWORD(e.lpar));
 				size = [LOWORD(e.lpar),HIWORD(e.lpar)];
-				return true;
-			case WM_KEYDOWN:
+			},
+			WM_KEYDOWN: (e){
 				Keyboard.key c = cast(Keyboard.key)toLower(cast(char)e.wpar);
 				Keyboard.set(c, true);
 				onKeyboard(c, true);
-				return true;
-			case WM_KEYUP:
+			},
+			WM_KEYUP: (e){
 				auto c = cast(Keyboard.key)toLower(cast(char)e.wpar);
 				Keyboard.set(c, false);
 				onKeyboard(c, false);
-				return true;
-			case WM_CHAR:
+			},
+			WM_CHAR: (e){
 				onKeyboard(cast(dchar)e.wpar);
-				return true;
-			case WM_ACTIVATE:
+			},
+			WM_ACTIVATE: (e){
 				onKeyboardFocus(LOWORD(e.wpar) > 0 ? true : false);
-				return true;
-			case WM_SETCURSOR:
+			},
+			WM_SETCURSOR: (e){
 				SetCursor(MOUSE_CURSOR_TO_HCUR[cast(int)cursor]);
-				return true;
-			case WM_MOUSEMOVE:
-				if(!(parent && parent.mouseChild != this)){
+			},
+			WM_MOUSEMOVE: (e){
+				int x = GET_X_LPARAM(e.lpar);
+				int y = GET_Y_LPARAM(e.lpar);
+				if(!hasMouse){
 					TRACKMOUSEEVENT tme = {
 						TRACKMOUSEEVENT.sizeof, 2, windowHandle, 0xFFFFFFFF
 					};
 					TrackMouseEvent(&tme);
 					onMouseFocus(true);
+					lastX = x;
+					lastY = y;
+					hasMouse = true;
 				}
-				onMouseMove(GET_X_LPARAM(e.lpar), size.y-GET_Y_LPARAM(e.lpar));
-				return true;
-			case WM_MOUSELEAVE:
+				onMouseMove(x, y);
+				onRawMouse(x-lastX, y-lastY);
+				lastX = x;
+				lastY = y;
+			},
+			WM_MOUSELEAVE: (e){
+				hasMouse = false;
 				onMouseFocus(false);
-				return true;
-			case WM_LBUTTONDOWN:
+			},
+			WM_LBUTTONDOWN: (e){
 				onMouseButton(Mouse.buttonLeft, true, LOWORD(e.lpar), HIWORD(e.lpar));
-				return true;
-			case WM_LBUTTONUP:
+			},
+			WM_LBUTTONUP: (e){
 				onMouseButton(Mouse.buttonLeft, false, LOWORD(e.lpar), HIWORD(e.lpar));
-				return true;
-			case WM_MBUTTONDOWN:
+			},
+			WM_MBUTTONDOWN: (e){
 				onMouseButton(Mouse.buttonMiddle, true, LOWORD(e.lpar), HIWORD(e.lpar));
-				return true;
-			case WM_MBUTTONUP:
+			},
+			WM_MBUTTONUP: (e){
 				onMouseButton(Mouse.buttonMiddle, false, LOWORD(e.lpar), HIWORD(e.lpar));
-				return true;
-			case WM_RBUTTONDOWN:
+			},
+			WM_RBUTTONDOWN: (e){
 				onMouseButton(Mouse.buttonRight, true, LOWORD(e.lpar), HIWORD(e.lpar));
-				return true;
-			case WM_RBUTTONUP:
+			},
+			WM_RBUTTONUP: (e){
 				onMouseButton(Mouse.buttonRight, false, LOWORD(e.lpar), HIWORD(e.lpar));
-				return true;
-			case WM_MOUSEWHEEL:
+			},
+			WM_MOUSEWHEEL: (e){
 				onMouseButton(
 						GET_WHEEL_DELTA_WPARAM(e.wpar) > 120 ? Mouse.wheelDown : Mouse.wheelUp,
 						true, LOWORD(e.lpar), HIWORD(e.lpar)
 				);
-				return true;
-			default:
-				return false;
-		}
+			}
+		];
+	}
+
+	void addEvent(Event e){
+		eventQueue ~= e;
+	}
+
+	void processEvents(){
+		foreach(e; eventQueue)
+			if(e.msg in eventHandlers)
+				eventHandlers[e.msg](e);
+		eventQueue.clear;
 	}
 
 }

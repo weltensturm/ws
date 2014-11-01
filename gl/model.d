@@ -4,6 +4,8 @@ module ws.gl.model;
 import file = std.file, std.parallelism;
 
 import
+	std.path,
+	std.file,
 	ws.exception,
 	ws.thread.loader,
 	ws.gl.gl,
@@ -11,6 +13,7 @@ import
 	ws.gl.texture,
 	ws.gl.material,
 	ws.file.obj,
+	ws.file.bbatch,
 	ws.io,
 	ws.log,
 	ws.string,
@@ -27,18 +30,47 @@ class Model: Loadable {
 
 	Loader mainFinisher;
 
-	this(string p, Loader glFinisher, Loader mainFinisher){
-		assert(glFinisher);
-		assert(mainFinisher);
+	this(string p, Loader glFinisher=null, Loader mainFinisher=null){
 		path = p;
-		glFinisher.run(&finish);
 		this.mainFinisher = mainFinisher;
+		if(glFinisher)
+			glFinisher.run(&finish);
+		else
+			finish;
 	}
 
-	bool isValid(){
-		return valid;
+	override protected void finish(){
+		loadState = Loading;
+		if(path.extension == ".obj"){
+			auto mdl = new OBJ("models/" ~ path);
+			foreach(object; mdl.objects){
+				foreach(material; object.materials.values){
+					auto b = new BatchMaterial;
+					data ~= b;
+					if(mainFinisher)
+						mainFinisher.run({b.finishBatch(material);});
+					else
+						b.finishBatch(material);
+					b.finishMaterial(mdl, material.name);
+				}
+			}
+		}else if(path.extension == ".bb"){
+			BinaryBatch mdl;
+			if(!exists("models/" ~ path)){
+				mdl = BinaryBatch.fromObj(path.setExtension("obj"));
+				mdl.save;
+			}else
+				mdl = new BinaryBatch(path);
+			foreach(vm; mdl.data){
+				auto b = new BatchMaterial;
+				data ~= b;
+				b.finishBatch(vm);
+			}
+		}else{
+			assert(0, "Unknown extension in " ~ path);
+		}
+		loadState = Loaded;
 	}
-
 
 	class BatchMaterial {
 
@@ -46,14 +78,10 @@ class Model: Loadable {
 		Material mat;
 
 		private:
-			
-			OBJ.Material material;
 
-			void finishBatch(){
+			void finishBatch(OBJ.Material material){
 				assert(!batch);
 				assert(material);
-				scope(exit)
-					material = null;
 				batch = new Batch;
 				batch.begin(material.vertcount);
 				foreach(polygon; material.polygons){
@@ -65,7 +93,16 @@ class Model: Loadable {
 				batch.finish();
 			}
 
-			void finishMaterial(OBJ mdl){
+			void finishBatch(VertMat vm){
+				assert(!batch);
+				batch = new Batch;
+				batch.begin(cast(int)(vm.vertices.length));
+				foreach(vert; vm.vertices)
+					batch.addPoint(vert[0..3], vert[3..6], vert[6..8]);
+				batch.finish;
+			}
+
+			void finishMaterial(OBJ mdl, string material_name){
 				assert(!mat);
 				try {
 					string[string] partsVertex = ["singlelight": "forwardSpecular"];
@@ -76,13 +113,13 @@ class Model: Loadable {
 						"texture": gl.attributeTexture
 					];
 					mat = new Material(
-						path ~ ':' ~ material.name, partsVertex, partsFragment, attributes
+						path ~ ':' ~ material_name, partsVertex, partsFragment, attributes
 					);
 					float[3] col = [1,1,1];
 					mat.addUniform("diffuseColor", col);
 					foreach(mtllib; mdl.mtllibs){
 						foreach(mtl; mtllib.mtls){
-							if(mtl.name == material.name){
+							if(mtl.name == material_name){
 								if(mtl.mapDiffuse.length){
 									mat.linkVertex("texture", "getTexCoords");
 									mat.linkFragment("texture", "getTexColor");
@@ -97,7 +134,10 @@ class Model: Loadable {
 							}
 						}
 					}
-					mainFinisher.run(&mat.finish);
+					if(mainFinisher)
+						mainFinisher.run(&mat.finish);
+					else
+						mat.finish;
 				}catch(Exception e){
 					Log.warning(e.toString());
 					mat = null;
@@ -105,25 +145,6 @@ class Model: Loadable {
 			}
 
 	};
-
-	private:
-
-		void finish(){
-			loadState = Loading;
-			auto mdl = new OBJ("models/" ~ path);
-			foreach(object; mdl.objects){
-				foreach(material; object.materials.values){
-					auto b = new BatchMaterial;
-					data ~= b;
-					b.material = material;
-					mainFinisher.run(&b.finishBatch);
-					b.finishMaterial(mdl);
-				}
-			}
-			loadState = Loaded;
-		}
-
-		bool valid = false;
 
 }
 

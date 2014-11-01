@@ -8,6 +8,10 @@ import ws.decode;
 import ws.io;
 import ws.string;
 
+
+__gshared:
+
+
 class MTL {
 	public:
 		class Material {
