@@ -32,7 +32,7 @@ class FrameBuffer {
 		glGenFramebuffers(1, &fbo); 
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		textures = new GLuint[count];
-		glGenTextures(textures.length, textures.ptr);
+		glGenTextures(cast(int)textures.length, textures.ptr);
 		for(uint i = 0; i < textures.length; i++){
 			glBindTexture(GL_TEXTURE_2D, textures[i]);
     		glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, colors, type, null);
@@ -56,7 +56,7 @@ class FrameBuffer {
 
 	void destroy(){
 		glDeleteFramebuffers(1, &fbo);
-		glDeleteTextures(textures.length, textures.ptr);
+		glDeleteTextures(cast(int)textures.length, textures.ptr);
 		glDeleteRenderbuffers(1, &depth);
 	}
 
@@ -65,7 +65,7 @@ class FrameBuffer {
 		GLuint[] drawBuffers;
 		foreach(i, n; targets)
 			drawBuffers ~= GL_COLOR_ATTACHMENT0+n;
-		glDrawBuffers(drawBuffers.length, drawBuffers.ptr);
+		glDrawBuffers(cast(int)drawBuffers.length, drawBuffers.ptr);
 	}
 
 	void read(GLuint target){

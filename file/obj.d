@@ -122,6 +122,7 @@ class OBJ {
 	+/
 
 	this(string name){
+		path = name;
 		dataVectors = [[], [], []];
 
 		currentObject = null;
@@ -288,6 +289,7 @@ class OBJ {
 	string currentGroup;
 	long currentSmooth;
 	string currentPath;
+	string path;
 	
 }
 

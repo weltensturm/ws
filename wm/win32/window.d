@@ -303,7 +303,7 @@ class Win32Window: Base {
 					lastY = y;
 					hasMouse = true;
 				}
-				onMouseMove(x, y);
+				onMouseMove(x, size.y-y);
 				onRawMouse(x-lastX, y-lastY);
 				lastX = x;
 				lastY = y;
