@@ -2,6 +2,7 @@ module ws.gl.framebuffer;
 
 import
 	std.string,
+	ws.gl.texture,
 	ws.gl.gl;
 
 
@@ -19,33 +20,34 @@ string error(GLuint i){
 
 class FrameBuffer {
 
-	private {
-		GLuint fbo;
-		GLuint depth;
-		GLuint[] textures;
-		uint width, height;
-	}
+	GLuint fbo;
+	Texture depth;
+	Texture[] textures;
+	uint width, height;
 
 	this(int w, int h, int count, GLuint format=GL_RGBA32F, GLuint type=GL_FLOAT, GLuint colors=GL_RGB){
 		width = w;
 		height = h;
 		glGenFramebuffers(1, &fbo); 
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		textures = new GLuint[count];
-		glGenTextures(cast(int)textures.length, textures.ptr);
-		for(uint i = 0; i < textures.length; i++){
-			glBindTexture(GL_TEXTURE_2D, textures[i]);
+		for(uint i = 0; i < count; i++){
+			uint tex;
+			glGenTextures(1, &tex);
+			glBindTexture(GL_TEXTURE_2D, tex);
     		glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, colors, type, null);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, textures[i], 0);
+	        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, tex, 0);
+			textures ~= new Texture(tex);
 		}
-		glGenTextures(1, &depth);
-		glBindTexture(GL_TEXTURE_2D, depth);
+		uint tex;
+		glGenTextures(1, &tex);
+		glBindTexture(GL_TEXTURE_2D, tex);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH32F_STENCIL8, w, h, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, null);
-		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depth, 0);
+		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, tex, 0);
+		depth = new Texture(tex);
 		
 		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 		if(status != GL_FRAMEBUFFER_COMPLETE)
@@ -56,8 +58,10 @@ class FrameBuffer {
 
 	void destroy(){
 		glDeleteFramebuffers(1, &fbo);
-		glDeleteTextures(cast(int)textures.length, textures.ptr);
-		glDeleteRenderbuffers(1, &depth);
+		foreach(t; textures)
+			t.destroy;
+		//glDeleteTextures(cast(int)textures.length, textures.ptr);
+		depth.destroy;
 	}
 
 	void draw(GLuint[] targets){
@@ -76,13 +80,14 @@ class FrameBuffer {
 	/+++
 		Bind textures for reading
 		tex: [shader offset: framebuffer index, ...]
-	+/
+	/
 	void read(uint[uint] tex){
 		foreach(i, n; tex){
 			glActiveTexture(GL_TEXTURE0+i);
 			glBindTexture(GL_TEXTURE_2D, textures[n]);
 		}
 	}
+	+/
 
 	void blit(int which, int x, int y, int w){
 		float aspect = width/cast(float)height;

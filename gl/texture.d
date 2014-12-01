@@ -19,9 +19,21 @@ class Texture {
 	string path;
 	Point size;
 
-	/*~this(){
+	void destroy(){
 		glDeleteTextures(1, &id);
-	}*/
+	}
+
+	this(){}
+
+	this(uint id){
+		this.id = id;
+	}
+
+	int bind(int where){
+		glActiveTexture(GL_TEXTURE0 + where);
+		glBindTexture(GL_TEXTURE_2D, id);
+		return where;
+	}
 
 	static Texture load(string path){
 		if(path in textures)

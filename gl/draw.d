@@ -62,6 +62,8 @@ class draw {
 		s["Color"].set(color);
 		s["Offset"].set(offset);
 		s["Scale"].set(scale);
+		s["Image"].set(0);
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture.id);
 		batchRectTexture.draw();
 	}
@@ -95,7 +97,7 @@ class draw {
 		s["Scale"].set(scale);
 		float x = pos.x;
 		float y = pos.y;
-
+		glActiveTexture(GL_TEXTURE0);
 		foreach(dchar c; text){
 			if(c == '\n'){
 				x = pos.x;

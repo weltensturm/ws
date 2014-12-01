@@ -22,50 +22,83 @@ import
 __gshared:
 
 
-class Material: Loadable {
+const string VERTEX_BASE = "
+#version 130
 
-	/++ Shader + Uniforms
-		Params:
-			name = unique name
-			vp = array of vertex shader parts + the shader functions that should be called
-			fp = array of fragment shader parts + the shader functions that should be called
-			attr = attribute bindings
-		Example:
-			---
-			auto m = new Material(
-				"model.materialName",
-				["vertexPart1.vp": "vertexMain1", ...],
-				["fragmentPart1.fp": "fragmentMain1", ...],
-				["vertex": gl.attributeVertex, "normal": gl.attributeNormal, ...]
-			);
-			loader.finish(m);
-			---
-		You can then add uniform bindings and more shader parts.
-	+/
-	this(string name, string[string] vp, string[string] fp, int[string] attr){
+uniform mat4 mvp;
+uniform mat4 world;
+
+in vec4 vertex;
+in vec4 normal;
+in vec2 texCoord;
+
+out vec2 passTexCoord;
+
+//uniform float far;
+//out float logz;
+
+%s
+
+void main(){
+	%s
+	gl_Position = mvp*vertex;;
+	//worldNormal = (world*normal).xyz;
+	passTexCoord = texCoord.st;
+	//gl_Position.z = log2(max(1e-6, 1.0 + gl_Position.w)) * (2.0 / log2(far + 1.0)) - 1.0;
+	//gl_Position.z *= gl_Position.w;
+	//logz = log2(1.0 + gl_Position.w) / log2(far + 1);
+}";
+
+
+const string FRAGMENT_BASE = "
+#version 130
+
+out vec4 outDiffuse;
+out vec4 outNormal;
+
+//in float logz;
+
+vec4 calcNormal();
+vec4 calcDiffuse();
+
+void main(){
+	outDiffuse = calcDiffuse();
+	if(outDiffuse.a < 0)
+		discard;
+	outNormal = calcNormal();
+	//gl_FragDepth = logz;
+}";
+
+
+class DeferredMaterial: Loadable {
+
+	enum: int {
+		diffuse,
+		normal
+	}
+
+	this(string name, string[string] vp=null, string[] fp=null, int[string] attr=null){
 		this.name = name;
 		shader = new MaterialShader;
+		if(!vp)
+			vp = vp.init;
+		if(!fp)
+			fp = fp.init;
 		foreach(n,f; vp)
 			shader.partsVertex[n] = f;
-		foreach(n,f; fp)
-			shader.partsFragment[n] = f;
+		shader.partsFragment = fp.dup;
+		if(!attr)
+			attr = [
+					"vertex": gl.attributeVertex, 
+					"normal": gl.attributeNormal,
+					"texCoord": gl.attributeTexture
+					];
+		this.output = output.dup;
 		foreach(n,i; attr)
 			shader.attributes[n] = i;
 	}
 
 
-	/++
-		Activates a material for immediate use.
-		args: string name, T value, ...
-		Example:
-		---
-		mat.use(
-			"matrixProjection", someMatrix,
-			"worldColor", someVector,
-			...
-		);
-		---
-	+/
 	void use(Args...)(Args args){
 		if(!loaded)
 			exception("Trying to use unfinished material \"" ~ name ~ "\"");
@@ -125,33 +158,25 @@ class Material: Loadable {
 	}
 
 
-	void linkFragment(string path, string fn){
-		shader.partsFragment[path] = fn;
+	void linkFragment(string part){
+		shader.partsFragment ~= part;
 	}
-
-
-	//int[string] attributes;
-
 
 	override void finish(){
 		if(loadState != Idle)
 			exception("Already finished");
 		try {
 			loadState = Loadable.Loading;
-			string name;
-			foreach(part, f; shader.partsVertex)
-				name ~= part ~ ".vp;";
-			foreach(part, n; shader.partsFragment)
-				name ~= part ~ ".fp;";
-			name ~= '[';
-			foreach(n,i; shader.attributes)
-				name ~= tostring("%:%, ", n, i);
-			name ~= ']';
+			string name = 
+				to!string(shader.partsVertex)
+				~ to!string(shader.partsFragment) 
+				~ to!string(shader.attributes);
 			if(name in shaders)
 				shader = shaders[name];
 			else {
 				shader.name = name;
 				shader.finish();
+				shader.bindFrag([diffuse: "outDiffuse", normal: "outNormal"]);
 				shaders[name] = shader;
 			}
 			foreach(f; onFinish)
@@ -164,8 +189,10 @@ class Material: Loadable {
 	}
 
 	override string toString(){
-		return
-			name ~ ' ' ~ to!string(shader.partsVertex) ~ ' ' ~ to!string(shader.partsFragment);
+		return name ~ ':'
+				~ to!string(shader.partsVertex)
+				~ to!string(shader.partsFragment) 
+				~ to!string(shader.attributes);
 	}
 
 	void activateTextures(){
@@ -184,9 +211,7 @@ class Material: Loadable {
 
 		void delegate()[] onFinish;
 
-		//string[string] partsVertex;
-		//string[string] partsFragment;
-
+		string[int] output;
 		MaterialShader shader;
 		MaterialUniform[string] globals;
 
@@ -197,7 +222,7 @@ class Material: Loadable {
 
 			void attach(uint type, string path){
 				try
-					program.attach(new gl.Shader(type, cast(string)read("shaders/"~path)));
+					program.attach(new gl.Shader(type, cast(string)read("shaders/parts/"~path)));
 				catch(Exception e)
 					writeln("Failed to compile shader part \"" ~ path ~ "\":\n", e);
 			}
@@ -205,15 +230,12 @@ class Material: Loadable {
 			override void finish(){
 				try {
 					program = new gl.Program;
-
 					foreach(part, f; partsVertex)
 						attach(gl.shaderVertex, part ~ ".vp");
 					program.attach(new gl.Shader(gl.shaderVertex, buildVertex()));
-
-					foreach(part, f; partsFragment)
+					foreach(part; partsFragment)
 						attach(gl.shaderFragment, part ~ ".fp");
-					program.attach(new gl.Shader(gl.shaderFragment, buildFragment()));
-
+					program.attach(new gl.Shader(gl.shaderFragment, FRAGMENT_BASE));
 					foreach(s,i; attributes)
 						bindAttr([i: s]);
 					super.finish();
@@ -222,53 +244,18 @@ class Material: Loadable {
 			}
 
 			string buildVertex(){
-				const string vertex =
-						"#version 130\n"
-						"in vec4 vertex;\n"
-						"uniform mat4 matMVP;\n"
-						//"uniform float far;\n"
-						//"out float logz;\n"
-						"%s"
-						"void main(){\n"
-						"	%s"
-						"	gl_Position = matMVP*vertex;\n"
-						//"	gl_Position.z = log2(max(1e-6, 1.0 + gl_Position.w)) * (2.0 / log2(far + 1.0)) - 1.0;\n"
-						//"	gl_Position.z *= gl_Position.w;\n"
-						//"	logz = log2(1.0 + gl_Position.w) / log2(far + 1);"
-						"}";
 				string dec;
 				foreach(_, f; partsVertex)
 					dec ~= "void " ~ f ~ "();\n";
 				string call;
 				foreach(_, f; partsVertex)
 					call ~= '\t' ~ f ~ "();\n";
-				return vertex.format(dec, call);
-			}
-
-			string buildFragment(){
-				const string fragment = 
-						"#version 130\n"
-						"out vec4 fragColor;\n"
-						//"in float logz;\n"
-						"%s"
-						"void main(){\n"
-						//"	gl_FragDepth = logz;"
-						"	fragColor = vec4(1,1,1,1);\n"
-							"%s"
-						"	if(fragColor.a < 0) discard;\n"
-						"}";
-				string dec;
-				foreach(_, f; partsFragment)
-					dec ~= "vec4 " ~ f ~ "();\n";
-				string call;
-				foreach(_, f; partsFragment)
-					call ~= "\tfragColor *= " ~ f ~ "();\n";
-				return fragment.format(dec, call);
+				return VERTEX_BASE.format(dec, call);
 			}
 
 			int[string] attributes;
 			string[string] partsVertex;
-			string[string] partsFragment;
+			string[] partsFragment;
 		}
 
 

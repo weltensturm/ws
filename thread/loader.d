@@ -78,6 +78,8 @@ interface Loader {
 
 	void run(Function);
 
+	int length();
+
 }
 
 
@@ -88,7 +90,13 @@ class LoaderQueue: Loader {
 	this(){
 		queue = new List!Function;
 	}
-	
+
+	override int length(){
+		synchronized(this){
+			return cast(int)queue.length;
+		}
+	}
+
 	override void run(Function fn){
 		synchronized(this){
 			queue ~= fn;
@@ -96,7 +104,7 @@ class LoaderQueue: Loader {
 	}
 
 	void tick(){
-		if(queue.length){
+		if(length){
 			Function fn;
 			synchronized(this){
 				fn = queue.popFront();

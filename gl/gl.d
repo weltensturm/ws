@@ -4,6 +4,7 @@ module ws.gl.gl;
 public import derelict.opengl3.gl3;
 
 import
+	std.regex,
 	derelict.opengl3.wgl,
 	derelict.opengl3.glx,
 	ws.sys.library;
@@ -17,7 +18,7 @@ version(linux) pragma(lib, "dl");
 import std.string, ws.string, ws.exception;
 
 import
-	//ws.io,
+	ws.io,
 	std.conv,
 	ws.math.vector,
 	ws.math.matrix;
@@ -77,8 +78,19 @@ class gl {
 			glCompileShader(shader);
 			int r;
 			glGetShaderiv(shader, compileStatus, &r);
-			if(!r)
-				exception("Failed to compile shader\n" ~ getLog());
+			if(!r){
+				string msg;
+				auto log = getLog();
+				foreach(i, line; text.splitLines){
+					auto m = match(log, regex(r"[0-9]\(%s\) :".format(i+1)));
+					if(m)
+						msg ~= "!\t%s\t%s\n".format(i+1, line);
+					else
+						msg ~= "\t%s\t%s\n".format(i+1, line);
+				}
+				msg ~= (log ~ '\n');
+				exception("Failed to compile shader\n" ~ msg);
+			}
 		}
 		
 		string getLog(){
