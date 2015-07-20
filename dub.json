@@ -1,0 +1,23 @@
+{
+
+	"name" : "ws",
+	
+	"description" : "weltensturm-library",
+	
+	"targetType": "library",
+	"targetFileName": "ws",
+	
+	"dependencies" : {
+		"derelict-gl3": "~master",
+		"derelict-ft": ">=1.0.0",
+		"derelict-fi": "~master",
+		"x11": "~master"
+	},
+
+	"sourcePaths": ["src"],
+	"importPaths": ["src"],
+
+	"libs-posix": ["X11", "GL"]
+
+}
+
