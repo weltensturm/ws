@@ -9,9 +9,9 @@
 	
 	"dependencies" : {
 		"derelict-gl3": "~master",
-		"derelict-ft": ">=1.0.0",
-		"derelict-fi": "~master",
-		"x11": "~master"
+		"derelict-ft": "==1.0.2",
+		"derelict-fi": ">=1.0.0",
+		"x11-rogue": "==1.0.0"
 	},
 
 	"sourcePaths": ["src"],

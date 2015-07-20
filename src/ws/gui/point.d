@@ -1,23 +1,20 @@
-
 module ws.gui.point;
 
 
-ref int x(ref int[2] data){
-	return data[0];
-}
-alias w = x;
+public import ws.math: x, y;
 
-ref int y(ref int[2] data){
-	return data[1];
-}
+alias w = x;
 alias h = y;
+
+
+Point a(int[2] data){
+	return Point(data);
+}
 
 
 struct Point {
 
-
 	int[2] data = [0,0];
-
 
 	this(int x, int y){
 		data = [x, y];
@@ -27,16 +24,18 @@ struct Point {
 		data = d;
 	}
 
-
-	@property ref int x(){
-		return data[0];
+	Point opBinary(string op, T)(T[2] other) if(__traits(isArithmetic,T)) {
+		mixin("
+			return Point(
+				data[0] " ~ op ~ " cast(int)other[0],
+				data[1] " ~ op ~ " cast(int)other[1]
+			);
+		");
 	}
 
-
-	@property ref int y(){
-		return data[1];
+	Point opBinary(string op)(Point other){
+		return opBinary!op(other.data);
 	}
-	
 
 	Point opBinary(string op)(double other){
 		mixin("
@@ -47,23 +46,11 @@ struct Point {
 		");	
 	}
 
-	
-	Point opBinary(string op)(int[2] other){
-		mixin("
-			return Point(
-				data[0] " ~ op ~ " other[0],
-				data[1] " ~ op ~ " other[1]
-			);
-		");
-	}
-
 	Point opOpAssign(string op)(int[2] other){
 		mixin("this = this " ~ op ~ "other;");
 		return this;
 	}
 
-
 	alias data this;
 	
-
 }

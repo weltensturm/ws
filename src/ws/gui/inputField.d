@@ -102,9 +102,9 @@ class InputField: Text {
 				draw.line(pos[0] + 4, pos[1] + 3, pos[0] + 4, pos[1] + size[1]-2);
 			else {
 				auto lpos =
-						pos + text.cursor.prev.get().pos
-						+ Point(cast(int)text.cursor.prev.get().glyph.advance+2, -2);
-				draw.line(lpos, lpos + Point(0, size[1]-4));
+						pos.a + text.cursor.prev.get().pos
+						+ [text.cursor.prev.get().glyph.advance+2, -2];
+				draw.line(lpos, lpos.a + [0, size[1]-4]);
 			}
 		}
 		auto t = time.now;
@@ -114,7 +114,7 @@ class InputField: Text {
 			draw.rect(pos, size);
 			draw.setFont(font);
 			draw.setColor(1,1,1,alpha);
-			draw.text(pos + Point(2, cast(int)(font.size*0.6)), error);
+			draw.text(pos.a + [2, cast(int)(font.size*0.6)], error);
 		}
 	}
 

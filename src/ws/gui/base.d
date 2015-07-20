@@ -1,31 +1,36 @@
 
 module ws.gui.base;
 
-import ws.list, ws.wm, ws.gui.dragger;
+import
+	std.algorithm,
+	ws.wm,
+	ws.gui.dragger;
 
-public import ws.gui.point, ws.gui.input, ws.gui.style;
+public import
+	ws.gui.point,
+	ws.gui.input,
+	ws.gui.style;
 
+T[] without(T)(T[] array, T elem){
+	auto i = array.countUntil(elem);
+	if(i < 0)
+		return array;
+	return array[0..i] ~ array[i+1..$];
+}
 
 class Base {
 
 	Style style;
 	Mouse.cursor cursor;
-	Point size;
-	Point pos;
-	Point cursorPos;
+	int[2] size;
+	int[2] pos;
+	int[2] cursorPos;
 	Base parent;
 	Base mouseChild;
 	Base keyboardChild;
 	bool hidden = false;
-	List!Base children;
-	List!Base hiddenChildren;
-
-
-	this(){
-		children = new List!Base;
-		hiddenChildren = new List!Base;
-	}
-	
+	Base[] children;
+	Base[] hiddenChildren;
 	
 	T addNew(T, Args...)(Args args){
 		T e = new T(args);
@@ -43,12 +48,12 @@ class Base {
 	}
 
 	void remove(Base widget){
-		assert(widget.parent == this);
 		if(widget.hidden)
-			hiddenChildren.remove(widget);
+			hiddenChildren = hiddenChildren.without(widget);
 		else
-			children.remove(widget);
-		widget.parent = null;
+			children = children.without(widget);
+		if(widget.parent == this)
+			widget.parent = null;
 	}
 
 	
@@ -80,8 +85,8 @@ class Base {
 		if(parent)
 			parent.setTop(this);
 
-		children.remove(child);
-		children.pushFront(child);
+		children = children.without(child);
+		children = child ~ children;
 
 		keyboardChild = child;
 		child.onKeyboardFocus(true);
@@ -99,8 +104,8 @@ class Base {
 			return;
 		hidden = false;
 		if(parent){
-			parent.hiddenChildren.remove(this);
-			parent.children.pushFront(this);
+			parent.hiddenChildren = parent.hiddenChildren.without(this);
+			parent.children = this ~ parent.children;
 			parent.setTop(this);
 			auto p = parent;
 			while(p.parent)
@@ -123,10 +128,10 @@ class Base {
 			if(parent.mouseChild == this)
 				parent.onMouseFocus(false);
 			+/
-			parent.children.remove(this);
+			parent.children = parent.children.without(this);
 			parent.hiddenChildren ~= this;
 			if(parent.children.length)
-				parent.setTop(parent.children.front);
+				parent.setTop(parent.children[0]);
 			auto p = parent;
 			while(p.parent)
 				p = p.parent;

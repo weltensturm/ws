@@ -92,7 +92,7 @@ class Tabs: Base {
 		auto s = Point(0,0);
 		foreach(p; pages)
 			s += p.button.size;
-		Point start = (size - s)*offset;
+		int[2] start = (size.a - s)*offset;
 		foreach(p; pages){
 			p.button.moveLocal([
 				position == right ? size.x-buttonSize.x :
@@ -102,7 +102,7 @@ class Tabs: Base {
 				position == bottom ? 0 :
 				size.y-start.y
 			]);
-			start += p.button.size;
+			start = start.a + p.button.size;
 		}
 	}
 

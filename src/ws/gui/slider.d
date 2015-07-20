@@ -35,19 +35,18 @@ class Slider: Base {
 		draw.setColor(background);
 		draw.rect(pos, size);
 		draw.setColor([0,0,0,1]);
-		draw.rect(pos + Point(0, size.y/2-1), Point(size.x, 2));
+		draw.rect(pos.a + [0, size.y/2-1], [size.x, 2]);
 		int x = cast(int)((current - min)/(max-min) * (size.x-width) + pos.x+width/2);
 		draw.setColor(slider);
-		draw.rect(pos + Point(0, size.y/2-1), Point(x-pos.x, 2));
-		draw.rect(pos + Point(x-pos.x-width/2, 3), Point(width,width));
+		draw.rect(pos.a + [0, size.y/2-1], [x-pos.x, 2]);
+		draw.rect(pos.a + [x-pos.x-width/2, 3], [width,width]);
 		//draw.setColor(slider);
 		draw.setColor([0.1,0.1,0.1,1]);
 		//draw.rect(pos + Point(x-pos.x, 2), Point(2, size.y-4));
-		draw.rect(pos + Point(x-pos.x-width/2+2, 5), Point(width-4,width-4));
+		draw.rect(pos.a + [x-pos.x-width/2+2, 5], [width-4,width-4]);
 	}
 
 	this(){
-		super();
 		onSlide = new Event!float;
 	}
 

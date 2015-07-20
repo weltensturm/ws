@@ -18,7 +18,6 @@ class Text: Base {
 	Shader shader;
 
 	this(){
-		super();
 		style.bg.normal = [0, 0, 0, 0.5];
 		style.fg.normal = [1, 1, 1, 1];
 		text = new String;

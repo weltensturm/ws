@@ -7,7 +7,6 @@ import
 	ws.gl.shader,
 	ws.gl.font,
 	ws.gl.texture,
-	ws.math.vector,
 	ws.gui.point;
 
 
