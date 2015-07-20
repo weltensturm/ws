@@ -17,7 +17,9 @@
 	"sourcePaths": ["src"],
 	"importPaths": ["src"],
 
-	"libs-posix": ["X11", "GL"]
+	"libs-posix": ["X11", "GL"],
+
+	"license": "MIT"
 
 }
 
