@@ -105,7 +105,7 @@ class Base {
 		hidden = false;
 		if(parent){
 			parent.hiddenChildren = parent.hiddenChildren.without(this);
-			parent.children = this ~ parent.children;
+			parent.children ~= this;
 			parent.setTop(this);
 			auto p = parent;
 			while(p.parent)
@@ -129,7 +129,7 @@ class Base {
 				parent.onMouseFocus(false);
 			+/
 			parent.children = parent.children.without(this);
-			parent.hiddenChildren ~= this;
+			parent.hiddenChildren = this ~ parent.hiddenChildren;
 			if(parent.children.length)
 				parent.setTop(parent.children[0]);
 			auto p = parent;
