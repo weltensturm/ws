@@ -1,7 +1,5 @@
 module ws.file.freeimage;
 
-pragma(lib, "DerelictFI");
-
 
 import
 	std.string,

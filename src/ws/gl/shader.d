@@ -37,6 +37,19 @@ class Shader: Loadable {
 			return shader;
 		}
 
+		static Shader load(string name, string[uint] attr, string[uint] frag, string vertex, string fragment){
+			string id = name ~ tostring(attr) ~ tostring(frag);
+			if(id in shaderContainer)
+				return shaderContainer[id];
+			auto shader = prepare(id);
+			shader.start(name, vertex, fragment);
+			shader.bindAttr(attr);
+			if(frag)
+				shader.bindFrag(frag);
+			shader.finish();
+			return shader;
+		}
+
 
 		static Shader prepare(string id){
 			if(id in shaderContainer)
@@ -120,7 +133,7 @@ class Shader: Loadable {
 
 		void bindFrag(string[uint] frags){
 			foreach(i, name; frags)
-				glBindFragDataLocation(program.program, i, name.toStringz());
+				glBindFragDataLocation(program.program, i, name.toStringz);
 		}
 
 

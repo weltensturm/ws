@@ -37,10 +37,23 @@ class X11Window: Base {
 		windowHandle = handle;
 	}
 
-	this(int w, int h, string t){
+	this(int w, int h, string t, bool override_redirect=false){
 		title = t;
 		size = [w, h];
 		eventQueue = new List!Event;
+		
+		XSetWindowAttributes wa;
+		wa.override_redirect = override_redirect;
+		import std.stdio; writeln(override_redirect);
+		wa.background_pixmap = ParentRelative;
+		wa.event_mask = wm.eventMask;
+		wa.border_pixel = 0;
+		wa.bit_gravity = StaticGravity;
+		wa.colormap = XCreateColormap(
+				wm.displayHandle, XRootWindow(wm.displayHandle, wm.graphicsInfo.screen),
+				wm.graphicsInfo.visual, AllocNone
+		);
+		
 		windowHandle = XCreateWindow(
 			wm.displayHandle,
 			XDefaultRootWindow(wm.displayHandle),
@@ -48,8 +61,8 @@ class X11Window: Base {
 			wm.graphicsInfo.depth,
 			InputOutput,
 			wm.graphicsInfo.visual,
-			wm.windowMask,
-			&wm.windowAttributes
+			wm.windowMask | (override_redirect ? CWOverrideRedirect : 0),
+			&wa
 		);
 		inputContext = XCreateIC(
 			XOpenIM(wm.displayHandle, null, null, null),
@@ -62,11 +75,12 @@ class X11Window: Base {
 		Atom wmDelete = XInternAtom(wm.displayHandle, "WM_DELETE_WINDOW".toStringz, True);
 		XSetWMProtocols(wm.displayHandle, windowHandle, &wmDelete, 1);
 		shouldCreateGraphicsContext();
-		show();
+		show;
+		resize(size);
 		assert(windowHandle);
 	}
 
-	
+
 	override void show(){
 		if(isActive)
 			return;
@@ -87,6 +101,10 @@ class X11Window: Base {
 	
 	void swapBuffers(){
 		glXSwapBuffers(wm.displayHandle, cast(uint)windowHandle);
+	}
+
+	override void onDraw(){
+		super.onDraw;
 	}
 
 	@property
@@ -288,6 +306,15 @@ class X11Window: Base {
 		}
 	}
 
+
+	override void resize(int[2] size){
+		super.resize(size);
+		glViewport(0,0,size.w,size.h);
+	}
+
+	override void move(int[2] pos){
+		this.pos = pos;
+	}
 
 	void shouldCreateGraphicsContext(){
 		try {

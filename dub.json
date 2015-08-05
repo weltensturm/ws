@@ -8,7 +8,7 @@
 	"targetFileName": "ws",
 	
 	"dependencies" : {
-		"derelict-gl3": "~master",
+		"derelict-gl3": ">=1.0.0",
 		"derelict-ft": "==1.0.2",
 		"derelict-fi": ">=1.0.0",
 		"x11": ">=1.0.8"

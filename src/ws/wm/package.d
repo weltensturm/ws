@@ -19,9 +19,6 @@ version(Windows){
 	alias GraphicsContext = Context;
 }
 version(Posix){
-	pragma(lib, "DerelictGL3");
-	pragma(lib, "DerelictUtil");
-	pragma(lib, "dl");
 	import
 		ws.wm.x11.api,
 		ws.wm.x11.window,
@@ -34,9 +31,12 @@ version(Posix){
 }
 
 
-static WindowManager wm;
+//static WindowManager wm;
 
-shared static this(){
-	wm = new WindowManager;
+WindowManager wm(){
+	static WindowManager wm;
+	if(!wm)
+		wm = new WindowManager;
+	return wm;
 }
 

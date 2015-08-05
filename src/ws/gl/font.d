@@ -1,8 +1,6 @@
 
 module ws.gl.font;
 
-pragma(lib, "DerelictFT");
-
 import
 	file = std.file,
 	std.process,

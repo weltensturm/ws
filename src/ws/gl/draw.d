@@ -148,7 +148,7 @@ class draw {
 						batchRectTexture.addPoint([1, 1, 0], [1,1]);
 						batchRectTexture.addPoint([0, 1, 0], [0,1]);
 						batchRectTexture.finish();
-						shaders[t] = Shader.load("2d_texture", [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"]);
+						shaders[t] = Shader.load("2d_texture", [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"], null, TEXTURE_VERT, TEXTURE_FRAG);
 						break;
 					case type.rect:
 						batchRect = new Batch;
@@ -158,7 +158,7 @@ class draw {
 						batchRect.add([1, 1, 0]);
 						batchRect.add([0, 1, 0]);
 						batchRect.finish();
-						shaders[t] = Shader.load("2d_rect", [gl.attributeVertex: "vVertex"]);
+						shaders[t] = Shader.load("2d_rect", [gl.attributeVertex: "vVertex"], null, RECT_VERT, RECT_FRAG);
 						break;
 					case type.line:
 						batchLine = new Batch;
@@ -166,10 +166,10 @@ class draw {
 						batchLine.add([0,0,0]);
 						batchLine.add([0,10,0]);
 						batchLine.finish();
-						shaders[t] = Shader.load("2d_rect", [gl.attributeVertex: "vVertex"]);
+						shaders[t] = Shader.load("2d_rect", [gl.attributeVertex: "vVertex"], null, RECT_VERT, RECT_FRAG);
 						break;
 					case type.text:
-						shaders[t] = Shader.load("2d_texture", [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"]);
+						shaders[t] = Shader.load("2d_texture", [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"], null, TEXTURE_VERT, TEXTURE_FRAG);
 				}
 			}
 			shaders[t].use();
@@ -182,3 +182,75 @@ class draw {
 		static Batch batchLine;
 		
 }
+
+enum TEXTURE_VERT = "
+#version 130
+
+in vec4 vVertex;
+in vec2 vTexture0;
+
+uniform vec3 Screen;
+uniform vec3 Offset;
+uniform vec3 Scale;
+
+smooth out vec2 vVaryingTexCoord;
+
+void main(void){
+	vVaryingTexCoord = vTexture0.st;
+	vec4 t = vVertex;
+	t.x = (vVertex.x*Scale.x + Offset.x) / Screen.x * 2 - 1;
+	t.y = (vVertex.y*Scale.y + Offset.y) / Screen.y * 2 - 1;
+	gl_Position = t;
+}
+";
+
+enum TEXTURE_FRAG = "
+#version 130
+
+uniform sampler2D Image;
+uniform vec4 Color;
+
+out vec4 vFragColor;
+
+smooth in vec2 vVaryingTexCoord;
+
+void main(void){
+	vec4 color = texture(Image, vVaryingTexCoord);
+	if(color.a < 0.01) discard;
+	vFragColor = color * Color;
+}
+";
+
+enum RECT_VERT = "
+#version 130
+
+in vec4 vVertex;
+
+uniform vec3 Screen;
+uniform vec3 Offset;
+uniform vec3 Scale;
+
+void main(void){
+	vec4 t = vVertex;
+	t.x = (vVertex.x*Scale.x + Offset.x) / Screen.x * 2 - 1;
+	t.y = (vVertex.y*Scale.y + Offset.y) / Screen.y * 2 - 1;
+	gl_Position = t;
+}
+";
+
+enum RECT_FRAG = "
+#version 130
+
+uniform vec4 Color;
+
+out vec4 vFragColor;
+
+void main(void){
+	if(Color.a < 0.01) discard;
+	vFragColor = Color;
+}
+";
+
+
+
+

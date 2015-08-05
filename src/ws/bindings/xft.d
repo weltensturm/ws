@@ -9,8 +9,6 @@ import
 
 extern(C){
 
-	pragma(lib, "Xft");
-
 	alias XftChar8 = char;
 	alias XftResult = FcResult;
 

@@ -3,6 +3,7 @@ module ws.gui.base;
 
 import
 	std.algorithm,
+	std.array,
 	ws.wm,
 	ws.gui.dragger;
 
@@ -30,7 +31,6 @@ class Base {
 	Base keyboardChild;
 	bool hidden = false;
 	Base[] children;
-	Base[] hiddenChildren;
 	
 	T addNew(T, Args...)(Args args){
 		T e = new T(args);
@@ -47,11 +47,12 @@ class Base {
 		return gui;
 	}
 
+	Base[] hiddenChildren(){
+		return children.filter!"a.hidden".array;
+	}
+
 	void remove(Base widget){
-		if(widget.hidden)
-			hiddenChildren = hiddenChildren.without(widget);
-		else
-			children = children.without(widget);
+		children = children.without(widget);
 		if(widget.parent == this)
 			widget.parent = null;
 	}
@@ -104,9 +105,6 @@ class Base {
 			return;
 		hidden = false;
 		if(parent){
-			parent.hiddenChildren = parent.hiddenChildren.without(this);
-			parent.children ~= this;
-			parent.setTop(this);
 			auto p = parent;
 			while(p.parent)
 				p = p.parent;
@@ -128,10 +126,6 @@ class Base {
 			if(parent.mouseChild == this)
 				parent.onMouseFocus(false);
 			+/
-			parent.children = parent.children.without(this);
-			parent.hiddenChildren = this ~ parent.hiddenChildren;
-			if(parent.children.length)
-				parent.setTop(parent.children[0]);
 			auto p = parent;
 			while(p.parent)
 				p = p.parent;
