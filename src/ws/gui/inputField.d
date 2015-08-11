@@ -97,9 +97,9 @@ class InputField: Text {
 		super.onDraw();
 		auto color = style.fg.normal;
 		if(hasFocus){
-			draw.setColor(color[0], color[1], color[2], color[3]*clamp!float(sin(time.now*PI*2) + 0.5, 0, 1));
+			Draw.setColor(color[0], color[1], color[2], color[3]*clamp!float(sin(time.now*PI*2) + 0.5, 0, 1));
 			if(!text.cursor.prev)
-				draw.line(pos[0] + 4, pos[1] + 3, pos[0] + 4, pos[1] + size[1]-2);
+				Draw.line(pos[0] + 4, pos[1] + 3, pos[0] + 4, pos[1] + size[1]-2);
 			else {
 				auto lpos =
 						pos.a + text.cursor.prev.get().pos
@@ -110,11 +110,11 @@ class InputField: Text {
 		auto t = time.now;
 		if(errorTime+2 > t){
 			auto alpha = clamp!float(errorTime+2 - t, 0, 1)/1;
-			draw.setColor(1,0,0,alpha);
-			draw.rect(pos, size);
-			draw.setFont(font);
-			draw.setColor(1,1,1,alpha);
-			draw.text(pos.a + [2, cast(int)(font.size*0.6)], error);
+			Draw.setColor(1,0,0,alpha);
+			Draw.rect(pos, size);
+			Draw.setFont(font);
+			Draw.setColor(1,1,1,alpha);
+			Draw.text(pos.a + [2, cast(int)(font.size*0.6)], error);
 		}
 	}
 

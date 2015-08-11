@@ -4,6 +4,7 @@ module ws.gui.base;
 import
 	std.algorithm,
 	std.array,
+	ws.draw,
 	ws.wm,
 	ws.gui.dragger;
 
@@ -31,7 +32,10 @@ class Base {
 	Base keyboardChild;
 	bool hidden = false;
 	Base[] children;
-	
+	DrawEmpty _draw;
+	bool[int] buttons;
+	bool dragging;
+
 	T addNew(T, Args...)(Args args){
 		T e = new T(args);
 		add(e);
@@ -57,7 +61,27 @@ class Base {
 			widget.parent = null;
 	}
 
-	
+	Base drag(int[2] offset){
+		return null;
+	}
+
+	bool canDrop(Base source){
+		if(mouseChild)
+			return mouseChild.canDrop(source);
+		return false;
+	}
+
+	void drop(Base target){
+		if(mouseChild)
+			mouseChild.drop(target);		
+	}
+
+	Base root(){
+		if(parent)
+			return parent.root;
+		return this;
+	}
+
 	Draggable grab(int x, int y){
 		if(mouseChild)
 			return mouseChild.grab(x, y);
@@ -174,19 +198,25 @@ class Base {
 	void onMouseMove(int x, int y){
 		bool foundFocus = false;
 		cursorPos = [x,y];
-		foreach(child; children){
-			if(child.pos.x < x && child.pos.x+child.size.x > x && child.pos.y < y && child.pos.y+child.size.y > y){
-				if(mouseChild == child){
+		if(dragging){
+			foundFocus = mouseChild !is null;
+		}else{
+			foreach(child; children){
+				if(child.hidden)
+					continue;
+				if(child.pos.x < x && child.pos.x+child.size.x > x && child.pos.y < y && child.pos.y+child.size.y > y){
+					if(mouseChild == child){
+						foundFocus = true;
+						break;
+					}
+					if(mouseChild)
+						mouseChild.onMouseFocus(false);
+					child.onMouseFocus(true);
+					wm.active.setCursor(child.cursor);
+					mouseChild = child;
 					foundFocus = true;
 					break;
 				}
-				if(mouseChild)
-					mouseChild.onMouseFocus(false);
-				child.onMouseFocus(true);
-				wm.active.setCursor(child.cursor);
-				mouseChild = child;
-				foundFocus = true;
-				break;
 			}
 		}
 
@@ -202,14 +232,14 @@ class Base {
 	};
 	
 	void onMouseButton(Mouse.button b, bool p, int x, int y){
-		if(p && parent && (b == Mouse.buttonLeft || b == Mouse.buttonRight))
-			parent.setTop(this);	
-		if(keyboardChild && keyboardChild != mouseChild){
-			keyboardChild.onKeyboardFocus(false);
-			keyboardChild = null;
-		}
+		buttons[b] = p;
 		if(mouseChild)
 			return mouseChild.onMouseButton(b, p, x, y);
+		if(!buttons.values.any && dragging){
+			dragging = false;
+			onMouseMove(x, y);
+		}else if(buttons.values.any && !dragging)
+			dragging = true;
 	};
 	
 	void onMouseFocus(bool f){
@@ -223,6 +253,13 @@ class Base {
 		cursor = c;
 		if(parent && parent.mouseChild == this)
 			wm.active.setCursor(cursor);
+	}
+	
+	@property
+	DrawEmpty draw(){
+		if(!_draw && parent)
+			return parent.draw;
+		return _draw;
 	}
 	
 	void onDraw(){

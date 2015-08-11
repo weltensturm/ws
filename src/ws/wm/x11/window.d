@@ -44,7 +44,6 @@ class X11Window: Base {
 		
 		XSetWindowAttributes wa;
 		wa.override_redirect = override_redirect;
-		import std.stdio; writeln(override_redirect);
 		wa.background_pixmap = ParentRelative;
 		wa.event_mask = wm.eventMask;
 		wa.border_pixel = 0;
@@ -74,7 +73,8 @@ class X11Window: Base {
 		XSelectInput(wm.displayHandle, windowHandle, wm.eventMask);
 		Atom wmDelete = XInternAtom(wm.displayHandle, "WM_DELETE_WINDOW".toStringz, True);
 		XSetWMProtocols(wm.displayHandle, windowHandle, &wmDelete, 1);
-		shouldCreateGraphicsContext();
+		gcInit;
+		drawInit;
 		show;
 		resize(size);
 		assert(windowHandle);
@@ -85,7 +85,7 @@ class X11Window: Base {
 		if(isActive)
 			return;
 		XMapWindow(wm.displayHandle, windowHandle);
-		activateGraphicsContext();
+		gcActivate;
 		isActive = true;
 		onKeyboardFocus(true);
 	}
@@ -216,7 +216,7 @@ class X11Window: Base {
 		return to!string(data);
 	}
 	
-	GraphicsContext shareContext(){
+	GraphicsContext gcShare(){
 		return glXCreateContext(wm.displayHandle, cast(derelictX.XVisualInfo*)wm.graphicsInfo, cast(__GLXcontextRec*)graphicsContext, True);
 	}
 
@@ -225,40 +225,6 @@ class X11Window: Base {
 		glXMakeCurrent(wm.displayHandle, cast(uint)windowHandle, cast(__GLXcontextRec*)c);
 	}
 
-
-	void createGraphicsContext(){
-		version(Windows){
-		}version(Posix){
-			if(!wm.glCore)
-				throw new Exception("disabled");
-			int[] attribs = [
-				GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
-				GLX_CONTEXT_MINOR_VERSION_ARB, 3,
-				0
-			];
-			graphicsContext = wm.glXCreateContextAttribsARB(
-					wm.displayHandle, wm.mFBConfig[0], null, cast(int)True, attribs.ptr
-			);
-			if(!graphicsContext)
-				throw new Exception("glXCreateContextAttribsARB failed");
-		}
-	}
-	
-	
-	void createGraphicsContextOld(){
-		version(Windows){
-		}version(Posix){
-			/+wm.glCore = false;
-			GLint att[] = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, 0];
-			wm.graphicsInfo = glXChooseVisual(wm.displayHandle, 0, att.ptr);
-			graphicsContext = glXCreateContext(wm.displayHandle, wm.graphicsInfo, null, True);+/
-			
-			graphicsContext = glXCreateContext(wm.displayHandle, cast(derelictX.XVisualInfo*)wm.graphicsInfo, null, True);
-			if(!graphicsContext)
-				throw new Exception("glXCreateContext failed");
-		}
-	}
-	
 	
 	void processEvent(Event e){
 		switch(e.type){
@@ -295,8 +261,8 @@ class X11Window: Base {
 				oldX = e.xmotion.x;
 				oldY = e.xmotion.y;
 				break;
-			case ButtonPress: onMouseButton(e.xbutton.button, true, e.xbutton.x, e.xbutton.y); break;
-			case ButtonRelease: onMouseButton(e.xbutton.button, false, e.xbutton.x, e.xbutton.y); break;
+			case ButtonPress: onMouseButton(e.xbutton.button, true, e.xbutton.x, size.h-e.xbutton.y); break;
+			case ButtonRelease: onMouseButton(e.xbutton.button, false, e.xbutton.x, size.h-e.xbutton.y); break;
 			case EnterNotify: onMouseFocus(true); break;
 			case LeaveNotify: onMouseFocus(false); break;
 			case Expose: onDraw(); break;
@@ -310,28 +276,51 @@ class X11Window: Base {
 	override void resize(int[2] size){
 		super.resize(size);
 		glViewport(0,0,size.w,size.h);
+		if(draw)
+			draw.resize(size);
 	}
 
 	override void move(int[2] pos){
 		this.pos = pos;
 	}
 
-	void shouldCreateGraphicsContext(){
+	void gcInit(){
 		try {
-			createGraphicsContext();
+			if(!wm.glCore)
+				throw new Exception("disabled");
+			int[] attribs = [
+				GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
+				GLX_CONTEXT_MINOR_VERSION_ARB, 3,
+				0
+			];
+			graphicsContext = wm.glXCreateContextAttribsARB(
+					wm.displayHandle, wm.mFBConfig[0], null, cast(int)True, attribs.ptr
+			);
+			if(!graphicsContext)
+				throw new Exception("glXCreateContextAttribsARB failed");
 		}catch(Exception e){
-			//io.writeln("Creating deprecated graphics context");
-			createGraphicsContextOld();
+			/+wm.glCore = false;
+			GLint att[] = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, 0];
+			wm.graphicsInfo = glXChooseVisual(wm.displayHandle, 0, att.ptr);
+			graphicsContext = glXCreateContext(wm.displayHandle, wm.graphicsInfo, null, True);+/
+			
+			graphicsContext = glXCreateContext(wm.displayHandle, cast(derelictX.XVisualInfo*)wm.graphicsInfo, null, True);
+			if(!graphicsContext)
+				throw new Exception("glXCreateContext failed");
 		}
-		activateGraphicsContext();
+		gcActivate();
 		DerelictGL3.reload();
 	}
 	
 	
-	void activateGraphicsContext(){
+	void gcActivate(){
 		if(!wm.activeWindow)
 			wm.activeWindow = this;
 		makeCurrent(graphicsContext);
+	}
+
+	void drawInit(){
+		//_draw = new GlDraw;
 	}
 
 	long[2] getScreenSize(){

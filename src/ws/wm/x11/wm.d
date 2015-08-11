@@ -91,7 +91,7 @@ class X11WindowManager: BaseWindowManager {
 			foreach(win; wm.windows){
 				if(e.xany.window == win.windowHandle && win.isActive){
 					activeWindow = win;
-					win.activateGraphicsContext();
+					win.gcActivate;
 					win.processEvent(e);
 				}
 			}

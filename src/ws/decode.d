@@ -146,7 +146,7 @@ class Decode {
 				if(currentLevel)
 					error(line, "Unfinished {} block in text");
 				else if(data[0].length)
-					error(line, "Unfinished command");
+					error(line, "Unfinished command, queue: %s".format(queue));
 				else if(data[1].length)
 					error(line, "Unfinished argument");
 			}

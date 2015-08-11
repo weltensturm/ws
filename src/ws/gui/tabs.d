@@ -69,6 +69,7 @@ class Tabs: Base {
 			}
 			b.activate();
 			gui.show();
+			setTop(gui);
 			active = current;
 			updateSize();
 		};
@@ -100,7 +101,7 @@ class Tabs: Base {
 				start.x,
 				position == top ? size.y-buttonSize.y :
 				position == bottom ? 0 :
-				size.y-start.y
+				size.y-start.y-buttonSize.h
 			]);
 			start = start.a + p.button.size;
 		}

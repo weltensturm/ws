@@ -10,7 +10,7 @@ import
 	ws.gui.point;
 
 
-class draw {
+class Draw {
 	
 	static void setScreenResolution(long x, long y){
 		screen[0] = x; screen[1] = y;

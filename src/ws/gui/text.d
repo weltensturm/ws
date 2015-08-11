@@ -21,7 +21,7 @@ class Text: Base {
 		style.bg.normal = [0, 0, 0, 0.5];
 		style.fg.normal = [1, 1, 1, 1];
 		text = new String;
-		shader = Shader.load("2d_texture", [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"]);
+		shader = Shader.load("2d_texture", [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"], null, TEXTURE_VERT, TEXTURE_FRAG);
 		setFont("sans", 11);
 	}
 
@@ -45,7 +45,7 @@ class Text: Base {
 		}
 		glActiveTexture(GL_TEXTURE0);
 		shader.use();
-		shader["Screen"].set(draw.screen);
+		shader["Screen"].set(Draw.screen);
 		shader["Image"].set(0);
 		shader["Color"].set(style.fg.normal);
 		float[3] scale = [1,1,0];

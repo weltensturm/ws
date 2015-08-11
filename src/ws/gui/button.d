@@ -5,7 +5,7 @@ import
 	ws.gl.draw,
 	ws.gui.base,
 	ws.gui.style,
-	ws.gui.text,
+	ws.gui.textSimple,
 	ws.gui.point;
 
 
@@ -39,11 +39,11 @@ class Button: Base {
 	}
 
 	@property void text(string s){
-		title.text.set(s);
+		title.text = s;
 	}
 
 	@property string text(){
-		return title.text.toString;
+		return title.text;
 	}
 
 	this(string t){
@@ -61,7 +61,7 @@ class Button: Base {
 				[1, 1, 1, 1]
 		);
 		title = addNew!Text;
-		title.text.set(t);
+		title.text = t;
 		setStyle(style);
 	}
 
