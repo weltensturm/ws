@@ -20,6 +20,7 @@ T[] without(T)(T[] array, T elem){
 	return array[0..i] ~ array[i+1..$];
 }
 
+
 class Base {
 
 	Style style;
@@ -61,20 +62,42 @@ class Base {
 			widget.parent = null;
 	}
 
+
+
+	Base findChild(int x, int y, Base[] filter=[]){
+		foreach(child; children){
+			if(child.hidden || filter.canFind(child))
+				continue;
+			if(child.pos.x < x && child.pos.x+child.size.x > x && child.pos.y < y && child.pos.y+child.size.y > y){
+				return child.findChild(x, y, filter);
+			}
+		}
+		if(filter.canFind(this))
+			return null;
+		return this;
+	}
+
+
 	Base drag(int[2] offset){
 		return null;
 	}
 
-	bool canDrop(Base source){
-		if(mouseChild)
-			return mouseChild.canDrop(source);
-		return false;
+	Base dropTarget(int x, int y, Base draggable){
+		auto targetChild = findChild(x, y, [this,draggable]);
+		if(targetChild)
+			return targetChild.dropTarget(x, y, draggable);
+		return null;
 	}
 
-	void drop(Base target){
-		if(mouseChild)
-			mouseChild.drop(target);		
+	void dropPreview(int x, int y, Base draggable, bool start){
+		assert(false, "dropPreview not implemented");
 	}
+
+	void drop(int x, int y, Base draggable){
+		if(findChild(x, y, [this,draggable]))
+			findChild(x, y, [this,draggable]).drop(x, y, draggable);	
+	}
+
 
 	Base root(){
 		if(parent)
@@ -83,8 +106,8 @@ class Base {
 	}
 
 	Draggable grab(int x, int y){
-		if(mouseChild)
-			return mouseChild.grab(x, y);
+		if(findChild(x, y) != this)
+			return findChild(x, y).grab(x, y);
 		return null;
 	}
 
@@ -199,24 +222,18 @@ class Base {
 		bool foundFocus = false;
 		cursorPos = [x,y];
 		if(dragging){
-			foundFocus = mouseChild !is null;
+			foundFocus = true;
 		}else{
-			foreach(child; children){
-				if(child.hidden)
-					continue;
-				if(child.pos.x < x && child.pos.x+child.size.x > x && child.pos.y < y && child.pos.y+child.size.y > y){
-					if(mouseChild == child){
-						foundFocus = true;
-						break;
-					}
-					if(mouseChild)
-						mouseChild.onMouseFocus(false);
-					child.onMouseFocus(true);
-					wm.active.setCursor(child.cursor);
-					mouseChild = child;
-					foundFocus = true;
-					break;
-				}
+			auto child = findChild(x, y);
+			if(child == mouseChild){
+				foundFocus = true;
+			}else if(child && child != this){
+				if(mouseChild)
+					mouseChild.onMouseFocus(false);
+				child.onMouseFocus(true);
+				wm.active.setCursor(child.cursor);
+				mouseChild = child;
+				foundFocus = true;
 			}
 		}
 
@@ -234,7 +251,7 @@ class Base {
 	void onMouseButton(Mouse.button b, bool p, int x, int y){
 		buttons[b] = p;
 		if(mouseChild)
-			return mouseChild.onMouseButton(b, p, x, y);
+			mouseChild.onMouseButton(b, p, x, y);
 		if(!buttons.values.any && dragging){
 			dragging = false;
 			onMouseMove(x, y);
