@@ -67,21 +67,18 @@ class X11WindowManager: BaseWindowManager {
 			);
 		}
 
-	package {
-		Display* displayHandle;
-		XVisualInfo* graphicsInfo;
-		XSetWindowAttributes windowAttributes;
-		size_t windowMask;
-		size_t eventMask;
-		bool glCore;
-		GLXFBConfig* mFBConfig;
-		T_glXCreateContextAttribsARB glXCreateContextAttribsARB;
+	Display* displayHandle;
+	XVisualInfo* graphicsInfo;
+	XSetWindowAttributes windowAttributes;
+	size_t windowMask;
+	size_t eventMask;
+	bool glCore;
+	GLXFBConfig* mFBConfig;
+	T_glXCreateContextAttribsARB glXCreateContextAttribsARB;
 
-		
-		~this(){
-			XCloseDisplay(displayHandle);
-		}
-		
+	
+	~this(){
+		XCloseDisplay(displayHandle);
 	}
 
 	void processEvents(){

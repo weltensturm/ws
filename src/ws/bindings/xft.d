@@ -1,5 +1,7 @@
 module ws.bindings.xft;
 
+version(Posix):
+
 import
 	x11.X,
 	x11.Xlib,

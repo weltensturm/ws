@@ -22,7 +22,6 @@ class Win32Window: Base {
 	package {
 		Mouse.cursor cursor = Mouse.cursor.inherit;
 		string title;
-		bool isActive = false;
 		WindowHandle windowHandle;
 		GraphicsContext graphicsContext;
 		List!Event eventQueue;
@@ -36,6 +35,7 @@ class Win32Window: Base {
 		int lastX, lastY, jumpX, jumpY;
 
 		bool hasMouse;
+		bool _hasFocus;
 	}
 
 	this(WindowHandle handle){
@@ -62,6 +62,7 @@ class Win32Window: Base {
 		pos = [r.left, r.right];
 
 		shouldCreateGraphicsContext();
+		drawInit;
 		show();
 
 		RAWINPUTDEVICE rawMouseDevice;
@@ -74,35 +75,30 @@ class Win32Window: Base {
 	}
 
 	@property
-	bool active(){
-		return isActive;
-	}
-
-	@property
 	WindowHandle handle(){
 		return windowHandle;
 	}
 
 	override void show(){
-		if(isActive)
+		if(!hidden)
 			return;
 		ShowWindow(windowHandle, SW_SHOWNORMAL);
 		UpdateWindow(windowHandle);
 		activateGraphicsContext();
-		isActive = true;
 		onKeyboardFocus(true);
+		super.show;
 	}
 
 	override void hide(){
-		if(!isActive)
+		if(hidden)
 			return;
 		DestroyWindow(windowHandle);
-		isActive = false;
+		super.hide;
 	}
 
 	void setTitle(string title){
 		this.title = title;
-		if(isActive)
+		if(!hidden)
 			SetWindowTextW(windowHandle, title.toUTF16z());
 	}
 
@@ -116,6 +112,15 @@ class Win32Window: Base {
 		DWORD pid;
 		DWORD threadId = GetWindowThreadProcessId(windowHandle, &pid);
 		return pid;
+	}
+	
+	@property
+	override bool hasFocus(){
+		return _hasFocus;
+	}
+	
+	override void onKeyboardFocus(bool focus){
+		_hasFocus = focus;
 	}
 	
 	void createGraphicsContext(){
@@ -185,7 +190,7 @@ class Win32Window: Base {
 		makeCurrent(graphicsContext);
 	}
 
-	Context shareContext(){
+	Context gcShare(){
 		auto c = wm.wglCreateContextAttribsARB(deviceContext, graphicsContext, null);
 		if(!c)
 			throw new Exception("Failed to create shared context, " ~ getLastError());
@@ -233,6 +238,10 @@ class Win32Window: Base {
 		SetForegroundWindow(windowHandle);
 	}
 	+/
+
+	void drawInit(){
+		//_draw = new GlDraw;
+	}
 
 	void initializeHandlers(){
 		eventHandlers = [

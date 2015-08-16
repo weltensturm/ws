@@ -69,7 +69,7 @@ class Base {
 			if(child.hidden || filter.canFind(child))
 				continue;
 			if(child.pos.x < x && child.pos.x+child.size.x > x && child.pos.y < y && child.pos.y+child.size.y > y){
-				return child.findChild(x, y, filter);
+				return child;
 			}
 		}
 		if(filter.canFind(this))
@@ -151,13 +151,9 @@ class Base {
 		if(!hidden)
 			return;
 		hidden = false;
-		if(parent){
-			auto p = parent;
-			while(p.parent)
-				p = p.parent;
-			p.onMouseMove(cursorPos.x, cursorPos.y);
-		}
-		onShow();
+		if(parent)
+			root.onMouseMove(cursorPos.x, cursorPos.y);
+		onShow;
 	}
 
 	void hide(){
@@ -167,6 +163,14 @@ class Base {
 		onMouseFocus(false);
 		onKeyboardFocus(false);
 		if(parent){
+			if(parent.keyboardChild == this){
+				foreach(pc; parent.children){
+					if(pc.hidden)
+						continue;
+					parent.setTop(pc);
+					break;
+				}
+			}
 			/+
 			if(parent.keyboardChild == this)
 				onKeyboardFocus(false);
@@ -281,7 +285,8 @@ class Base {
 	
 	void onDraw(){
 		foreach_reverse(c; children)
-			c.onDraw();
+			if(!c.hidden)
+				c.onDraw;
 	}
 	
 	void setStyle(Style style){

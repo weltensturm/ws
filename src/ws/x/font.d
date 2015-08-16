@@ -1,5 +1,7 @@
 module ws.x.font;
 
+version(Posix):
+
 
 import
 	std.string,

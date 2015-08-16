@@ -12,33 +12,30 @@ version(Windows)
 __gshared:
 
 
-int[string] Keys;
+enum Keys = [
+    "buttonLeft": Mouse.buttonLeft,
+    "buttonRight": Mouse.buttonRight,
+    "buttonMiddle": Mouse.buttonMiddle,
+    "wheelUp": Mouse.wheelUp,
+    "wheelDown": Mouse.wheelDown,
+    "button4": Mouse.button4,
+    "button5": Mouse.button5,
+    
+    "shift": Keyboard.shift,
+    "control": Keyboard.control,
+    "caps": Keyboard.caps,
+    "win": Keyboard.win,
+    "escape": Keyboard.escape,
+    "enter": Keyboard.enter,
+    "backspace": Keyboard.backspace,
+    "space": Keyboard.space,
+    "delete": Keyboard.del,
+    "left": Keyboard.left,
+    "right": Keyboard.right,
+    "up": Keyboard.up,
+    "down": Keyboard.down
+];
 
-static this(){
-	Keys = [
-	    "buttonLeft": Mouse.buttonLeft,
-	    "buttonRight": Mouse.buttonRight,
-	    "buttonMiddle": Mouse.buttonMiddle,
-	    "wheelUp": Mouse.wheelUp,
-	    "wheelDown": Mouse.wheelDown,
-	    "button4": Mouse.button4,
-	    "button5": Mouse.button5,
-	    
-	    "shift": Keyboard.shift,
-	    "control": Keyboard.control,
-	    "caps": Keyboard.caps,
-	    "win": Keyboard.win,
-	    "escape": Keyboard.escape,
-	    "enter": Keyboard.enter,
-	    "backspace": Keyboard.backspace,
-	    "space": Keyboard.space,
-	    "delete": Keyboard.del,
-	    "left": Keyboard.left,
-	    "right": Keyboard.right,
-	    "up": Keyboard.up,
-	    "down": Keyboard.down
-	];
-}
 
 static class Mouse {
 	alias int button;

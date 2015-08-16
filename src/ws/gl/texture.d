@@ -56,7 +56,7 @@ class Texture {
 			glTexImage2D(
 					GL_TEXTURE_2D,
 					0,
-					cast(uint)(file.colors == 4 ? GL_RGBA : (file.colors == 3 ? GL_RGB : 0x1909)),
+					cast(uint)(file.colors == 4 ? GL_RGBA : (file.colors == 3 ? GL_SRGB : 0x1909)),
 					cast(int)file.width,
 					cast(int)file.height,
 					0,

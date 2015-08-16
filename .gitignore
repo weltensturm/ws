@@ -1,2 +1,4 @@
 libws.a
 ws.lib
+dub.selections.json
+.dub/*

@@ -1,5 +1,7 @@
 module ws.x.draw;
 
+version(Posix):
+
 
 import
 	std.string,

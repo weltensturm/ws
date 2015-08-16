@@ -1,7 +1,9 @@
 module ws.gl.draw;
 
 import
+	std.conv,
 	ws.exception,
+	ws.draw,
 	ws.gl.gl,
 	ws.gl.batch,
 	ws.gl.shader,
@@ -121,6 +123,175 @@ class Draw {
 			g.vao.draw();
 			x += g.advance;
 		}
+	}
+
+	static float[3] screen = [10,10,1];
+	static float[4] color = [1,1,1,1];
+	static Texture texture;
+
+	private:
+	
+		static Font font;
+		enum type {
+			rect = 1,
+			line,
+			text,
+			texture
+		}
+
+		static Shader activateShader(type t){
+			if(!(t in shaders)){
+				final switch(t){
+					case type.texture:
+						batchRectTexture = new Batch;
+						batchRectTexture.begin(4, gl.triangleFan);
+						batchRectTexture.addPoint([0, 0, 0], [0,0]);
+						batchRectTexture.addPoint([1, 0, 0], [1,0]);
+						batchRectTexture.addPoint([1, 1, 0], [1,1]);
+						batchRectTexture.addPoint([0, 1, 0], [0,1]);
+						batchRectTexture.finish();
+						shaders[t] = Shader.load("2d_texture", [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"], null, TEXTURE_VERT, TEXTURE_FRAG);
+						break;
+					case type.rect:
+						batchRect = new Batch;
+						batchRect.begin(4, gl.triangleFan);
+						batchRect.add([0, 0, 0]);
+						batchRect.add([1, 0, 0]);
+						batchRect.add([1, 1, 0]);
+						batchRect.add([0, 1, 0]);
+						batchRect.finish();
+						shaders[t] = Shader.load("2d_rect", [gl.attributeVertex: "vVertex"], null, RECT_VERT, RECT_FRAG);
+						break;
+					case type.line:
+						batchLine = new Batch;
+						batchLine.begin(2, gl.lines);
+						batchLine.add([0,0,0]);
+						batchLine.add([0,10,0]);
+						batchLine.finish();
+						shaders[t] = Shader.load("2d_rect", [gl.attributeVertex: "vVertex"], null, RECT_VERT, RECT_FRAG);
+						break;
+					case type.text:
+						shaders[t] = Shader.load("2d_texture", [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"], null, TEXTURE_VERT, TEXTURE_FRAG);
+				}
+			}
+			shaders[t].use();
+			return shaders[t];
+		}
+		static Shader[type] shaders;
+		
+		static Batch batchRect;
+		static Batch batchRectTexture;
+		static Batch batchLine;
+		
+}
+
+
+class GlDraw: DrawEmpty {
+	
+	override void resize(int[2] size){
+		screen = size.to!(float[2]) ~ 1;
+	}
+	
+	
+	override void setColor(float[3] rgb){
+		color = rgb ~ 1;
+	}
+	
+	
+	override void setColor(float[4] rgba){
+		color = rgba;
+	}
+	
+	
+	override void setFont(string f, int size){
+		font = Font.load(f, size);
+	}
+
+	/+
+	override void setFont(Font f){
+		font = f;
+	}
+	+/
+	
+	
+	override void rect(int[2] pos, int[2] size){
+		auto s = activateShader(type.rect);
+		float[3] offset = [pos.x, pos.y, 1];
+		float[3] scale = [size.w, size.h, 1];
+		s["Screen"].set(screen);
+		s["Color"].set(color);
+		s["Offset"].set(offset);
+		s["Scale"].set(scale);
+		batchRect.draw();
+	}
+
+	override void rectOutline(int[2] pos, int[2] size){
+		line(pos, pos.a + [size.w,0]);
+		line(pos, pos.a + [0,size.h]);
+		line(pos.a + [0,size.h], pos.a + size);
+		line(pos.a + [size.w,0], pos.a + size);
+	}
+
+	/+
+	override void texturedRect(Point pos, Point size){
+		if(!texture)
+			exception("No texture active");
+		auto s = activateShader(type.texture);
+		float[3] offset = [pos.x, pos.y, 0];
+		float[3] scale = [size.x, size.y, 0];
+		s["Screen"].set(screen);
+		s["Color"].set(color);
+		s["Offset"].set(offset);
+		s["Scale"].set(scale);
+		s["Image"].set(0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture.id);
+		batchRectTexture.draw();
+	}
+	+/
+	
+	override void line(int[2] start, int[2] end){
+		auto s = activateShader(type.line);
+		float[3] offset = [start.x+0.25,start.y+0.25,0];
+		float[3] scale = [1,1,0];
+		s["Screen"].set(screen);
+		s["Color"].set(color);
+		s["Offset"].set(offset);
+		s["Scale"].set(scale);
+		batchLine.updateVertices([end.x-start.x+0.25, end.y-start.y+0.25, 0], 1);
+		batchLine.draw();
+	}
+
+	override void text(int[2] pos, string text, double offset=-0.2){
+		if(!font)
+			exception("no font active");
+		auto s = activateShader(type.text);
+		float[3] scale = [1,1,0];
+		s["Screen"].set(screen);
+		s["Image"].set(0);
+		s["Color"].set(color);
+		s["Scale"].set(scale);
+		float x = pos.x;
+		float y = pos.y;
+		glActiveTexture(GL_TEXTURE0);
+		foreach(dchar c; text){
+			if(c == '\n'){
+				x = pos.x;
+				y -= font.size*1.4;
+				continue;
+			}
+			auto g = font[c];
+			glBindTexture(GL_TEXTURE_2D, g.tex);
+			float[3] p = [cast(int)x, cast(int)y, 0];
+			s["Offset"].set(p);
+			g.vao.draw();
+			x += g.advance;
+		}
+	}
+
+	override void text(int[2] pos, int h, string text, double offset=-0.2){
+		pos[1] += cast(int)((h-font.size)/2.0);
+		this.text(pos, text, offset);
 	}
 
 	static float[3] screen = [10,10,1];

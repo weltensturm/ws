@@ -265,6 +265,8 @@ class X11Window: Base {
 			case ButtonRelease: onMouseButton(e.xbutton.button, false, e.xbutton.x, size.h-e.xbutton.y); break;
 			case EnterNotify: onMouseFocus(true); break;
 			case LeaveNotify: onMouseFocus(false); break;
+			case MapNotify: onShow; break;
+			case UnmapNotify: onHide; break;
 			case Expose: onDraw(); break;
 			case ClientMessage: hide(); break;
 			case KeymapNotify: XRefreshKeyboardMapping(&e.xmapping); break;
@@ -316,7 +318,8 @@ class X11Window: Base {
 	void gcActivate(){
 		if(!wm.activeWindow)
 			wm.activeWindow = this;
-		makeCurrent(graphicsContext);
+		if(graphicsContext)
+			makeCurrent(graphicsContext);
 	}
 
 	void drawInit(){

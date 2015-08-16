@@ -36,7 +36,7 @@ class BaseWindowManager {
 	bool hasActiveWindows(){
 		int c;
 		foreach(window; windows)
-			if(window.active)
+			if(!window.hidden)
 				c++; // ha ha
 		return c > 0;
 	}

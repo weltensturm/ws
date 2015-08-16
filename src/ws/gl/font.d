@@ -14,6 +14,10 @@ import
 	ws.gl.gl,ws.gl.batch;
 
 
+version(Posix)
+	import std.path;
+
+
 class Font {
 
 	const string name;
@@ -55,7 +59,7 @@ class Font {
 				searchPaths ~= "C:/Windows/Fonts/";
 			version(Posix){
 				searchPaths ~= "/usr/share/fonts/TTF/";
-				searchPaths ~= cast(string)environment["HOME"] ~ "/.fonts/";
+				searchPaths ~= "~/.fonts/".expandTilde;
 			}
 			FT_Error r = FT_Init_FreeType(&ftLib);
 			if(r)
@@ -78,7 +82,7 @@ class Font {
 		if(!found){
 			writeln("Failed to find font file \"" ~ name ~ "\"");
 			if(name == "sans"){
-				throw new Exception("Failed to find font \"" ~ name ~ "\"" ~ " and \"sans\", no usable font available");
+				throw new Exception("Failed to find fallback font \"sans\", no usable font available");
 			} else {
 				Font f = load("sans", size);
 				f.reference = true;

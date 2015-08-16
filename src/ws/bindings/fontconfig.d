@@ -1,5 +1,7 @@
 module ws.bindings.fontconfig;
 
+version(Posix):
+
 import x11.Xlib;
 
 extern(C):

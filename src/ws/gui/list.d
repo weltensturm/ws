@@ -19,13 +19,13 @@ class List: Base {
 	long frameLast;
 	
 	override void resize(int[2] size){
-		update;
 		super.resize(size);
+		update;
 	}
 
 	void update(){
 		auto height = ((entryHeight+padding)*cast(long)children.length-size.h+padding).max(0);
-		int y = cast(int)(pos.y + size.h - padding - entryHeight + height*scroll).lround;
+		int y = cast(int)(pos.y + size.h - padding - entryHeight + height*scroll);
 		foreach(c; children){
 			c.move([pos.x + padding, y]);
 			c.resize([size.w-padding*2, entryHeight]);
