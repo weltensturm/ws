@@ -24,25 +24,26 @@ class List: Base {
 	}
 
 	void update(){
-		auto height = ((entryHeight+padding)*cast(long)children.length-size.h+padding).max(0);
-		int y = cast(int)(pos.y + size.h - padding - entryHeight + height*scroll);
+		auto height = ((entryHeight+padding)*cast(long)children.length-size.h+padding+entryHeight).max(0);
+		int y = cast(int)(pos.y + size.h - padding - entryHeight + scroll*entryHeight);
 		foreach(c; children){
 			c.move([pos.x + padding, y]);
 			c.resize([size.w-padding*2, entryHeight]);
 			y -= c.size.y + padding;
 		}
+		onMouseMove(cursorPos.x, cursorPos.y);
 		
 	}
 
 	override void onMouseButton(Mouse.button button, bool pressed, int x, int y){
 		if(button == Mouse.wheelDown){
-			if(pressed && scroll < 1){
-				scrollSpeed += 1.0/children.length;
+			if(pressed && scroll < children.length){
+				scrollSpeed += 1.0;
 				return;
 			}
 		}else if(button == Mouse.wheelUp){
 			if(pressed && scroll > 0){
-				scrollSpeed -= 1.0/children.length;
+				scrollSpeed -= 1.0;
 				return;
 			}
 		}
@@ -53,10 +54,12 @@ class List: Base {
 		if(hidden)
 			return;
 		frameTime = Clock.currSystemTick.msecs-frameLast;
-		scroll = (scroll + scrollSpeed*frameTime/30.0).min(1).max(0);
-		scrollSpeed = scrollSpeed.eerp(0, frameTime/2000.0);
 		frameLast = Clock.currSystemTick.msecs;
-		update;
+		if(scrollSpeed){
+			scroll = (scroll + scrollSpeed*frameTime/60.0).min(children.length).max(0);
+			scrollSpeed = scrollSpeed.eerp(0, frameTime/350.0, frameTime/350.0, frameTime/350.0);
+			update;
+		}
 		draw.setColor(style.bg.normal);
 		draw.rect(pos, size);
 		super.onDraw();
@@ -65,9 +68,9 @@ class List: Base {
 }
 
 
-double eerp(double current, double target, double speed){
+double eerp(double current, double target, double a, double b, double c){
 	auto dir = current < target ? 1 : -1;
 	auto diff = (current-target).abs;
-	return current + (dir*(diff*speed+speed)).min(diff).max(-diff);
+	return current + (dir*(a*diff^^2 + b*diff + c)).min(diff).max(-diff);
 }
 

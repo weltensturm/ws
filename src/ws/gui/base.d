@@ -147,6 +147,13 @@ class Base {
 		return parent.keyboardChild == this;
 	}
 
+	@property
+	bool hasMouseFocus(){
+		if(!parent)
+			return false;
+		return parent.mouseChild == this;
+	}
+
 	void show(){
 		if(!hidden)
 			return;
@@ -171,12 +178,6 @@ class Base {
 					break;
 				}
 			}
-			/+
-			if(parent.keyboardChild == this)
-				onKeyboardFocus(false);
-			if(parent.mouseChild == this)
-				parent.onMouseFocus(false);
-			+/
 			auto p = parent;
 			while(p.parent)
 				p = p.parent;

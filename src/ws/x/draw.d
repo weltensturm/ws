@@ -115,13 +115,14 @@ class XDraw: DrawEmpty {
 		setColor(color[0..3]);
 	}
 
-	void clip(int[2] pos, int[2] size){
+	override void clip(int[2] pos, int[2] size){
+		pos[1] = this.size[1] - pos[1] - size[1];
 		auto rect = XRectangle(cast(short)pos[0], cast(short)pos[1], cast(short)size[0], cast(short)size[1]);
 		XftDrawSetClipRectangles(xft, 0, 0, &rect, 1);
 		XSetClipRectangles(dpy, gc, 0, 0, &rect, 1, Unsorted);
 	}
 
-	void noclip(){
+	override void noclip(){
 		XSetClipMask(dpy, gc, None);
 		XftDrawSetClip(xft, null);
 	}
@@ -133,7 +134,7 @@ class XDraw: DrawEmpty {
 
 	override void rectOutline(int[2] pos, int[2] size){
 		XSetForeground(dpy, gc, color.pix);
-		XDrawRectangle(dpy, drawable, gc, pos.x+1, this.size.h-pos.y+1, size.w-1, size.h-1);
+		XDrawRectangle(dpy, drawable, gc, pos.x+1, this.size.h-pos.y-size.h+1, size.w-1, size.h-1);
 	}
 
 	override void text(int[2] pos, string text, double offset=-0.2){

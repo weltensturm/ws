@@ -8,6 +8,9 @@ class DrawEmpty {
 	void setColor(float[3] color){assert(false, "not implemented");}
 	void setColor(float[4] color){assert(false, "not implemented");}
 
+	void clip(int[2] pos, int[2] size){assert(false, "not implemented");}
+	void noclip(){assert(false, "not implemented");}
+
 	void rect(int[2] pos, int[2] size){assert(false, "not implemented");}
 
 	void rectOutline(int[2] pos, int[2] size){assert(false, "not implemented");}

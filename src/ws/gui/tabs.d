@@ -56,27 +56,32 @@ class Tabs: Base {
 
 	protected string font = "Ubuntu-B";
 
-	Page addPage(string name, Base gui){
-		auto b = addNew!TabButton(name);
-		b.resize(buttonSize);
-		b.font = font;
-		b.setStyle = buttonStyle;
+	Page addPage(TabButton button, Base gui){
+		add(button);
+		button.font = font;
+		button.setStyle = buttonStyle;
+		button.resize(buttonSize);
 		size_t current = pages.length;
-		b.leftClick ~= {
+		button.leftClick ~= {
 			if(active > -1){
 				pages[cast(size_t)active].content.hide();
 				pages[cast(size_t)active].button.disable();
 			}
-			b.activate();
+			button.activate();
 			gui.show();
 			setTop(gui);
 			active = current;
 			updateSize();
 		};
-		pages ~= Page(b, add(gui));
+		pages ~= Page(button, add(gui));
 		gui.hide();
 		updateSize();
 		return pages.back;
+	}
+
+	Page addPage(string name, Base gui){
+		auto button = new TabButton(name);
+		return addPage(button, gui);
 	}
 
 	void updateSize(){

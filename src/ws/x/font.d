@@ -30,7 +30,7 @@ class Font {
 		this.dpy = dpy;
 		if(name.length){
 			xfont = XftFontOpenName(dpy, screen, name.toStringz);
-			pattern = FcNameParse(cast(FcChar8*)name);
+			pattern = FcNameParse(cast(FcChar8*)name.toStringz);
 			if(!xfont || !pattern){
 				if(xfont){
 					XftFontClose(dpy, xfont);

@@ -14,13 +14,11 @@ class Button: Base {
 	Event!() leftClick;
 	Event!() rightClick;
 
-	protected {
-		Text title;
-		bool pressed;
-		bool mouseFocus;
-		string m_font = "sans";
-		int m_font_size = 12;
-	}
+	Text title;
+	bool pressed;
+	bool mouseFocus;
+	string m_font = "sans";
+	int m_font_size = 12;
 
 	@property string font(string s=""){
 		if(s.length){
