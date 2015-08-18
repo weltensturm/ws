@@ -57,7 +57,7 @@ class List: Base {
 		frameLast = Clock.currSystemTick.msecs;
 		if(scrollSpeed){
 			scroll = (scroll + scrollSpeed*frameTime/60.0).min(children.length).max(0);
-			scrollSpeed = scrollSpeed.eerp(0, frameTime/350.0, frameTime/350.0, frameTime/350.0);
+			scrollSpeed = scrollSpeed.eerp(0, frameTime/1000.0, frameTime/350.0, frameTime/350.0);
 			update;
 		}
 		draw.setColor(style.bg.normal);

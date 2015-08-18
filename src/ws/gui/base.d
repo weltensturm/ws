@@ -151,7 +151,7 @@ class Base {
 	bool hasMouseFocus(){
 		if(!parent)
 			return false;
-		return parent.mouseChild == this;
+		return parent.mouseChild == this && parent.hasMouseFocus;
 	}
 
 	void show(){

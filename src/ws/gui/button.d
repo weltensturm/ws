@@ -90,6 +90,7 @@ class Button: Base {
 	}
 
 	override void onMouseButton(Mouse.button button, bool p, int x, int y){
+		super.onMouseButton(button, p, x, y);
 		if(!p && pressed){
 			if(button == Mouse.buttonLeft)
 				leftClick();

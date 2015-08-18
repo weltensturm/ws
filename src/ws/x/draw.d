@@ -129,12 +129,12 @@ class XDraw: DrawEmpty {
 
 	override void rect(int[2] pos, int[2] size){
 		XSetForeground(dpy, gc, color.pix);
-		XFillRectangle(dpy, drawable, gc, pos.x, this.size.h-size.h-pos.y, size.w+1, size.h+1);
+		XFillRectangle(dpy, drawable, gc, pos.x, this.size.h-size.h-pos.y, size.w, size.h);
 	}
 
 	override void rectOutline(int[2] pos, int[2] size){
 		XSetForeground(dpy, gc, color.pix);
-		XDrawRectangle(dpy, drawable, gc, pos.x+1, this.size.h-pos.y-size.h+1, size.w-1, size.h-1);
+		XDrawRectangle(dpy, drawable, gc, pos.x, this.size.h-pos.y-size.h, size.w, size.h);
 	}
 
 	override void text(int[2] pos, string text, double offset=-0.2){

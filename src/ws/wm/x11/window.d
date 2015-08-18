@@ -30,6 +30,7 @@ class X11Window: Base {
 		int oldX, oldY;
 		int jumpTargetX, jumpTargetY;
 
+		bool mouseFocus;
 	}
 
 	this(WindowHandle handle){
@@ -263,8 +264,8 @@ class X11Window: Base {
 				break;
 			case ButtonPress: onMouseButton(e.xbutton.button, true, e.xbutton.x, size.h-e.xbutton.y); break;
 			case ButtonRelease: onMouseButton(e.xbutton.button, false, e.xbutton.x, size.h-e.xbutton.y); break;
-			case EnterNotify: onMouseFocus(true); break;
-			case LeaveNotify: onMouseFocus(false); break;
+			case EnterNotify: onMouseFocus(true); mouseFocus=true; break;
+			case LeaveNotify: onMouseFocus(false); mouseFocus=false; break;
 			case MapNotify: onShow; break;
 			case UnmapNotify: onHide; break;
 			case Expose: onDraw(); break;
@@ -274,6 +275,10 @@ class X11Window: Base {
 		}
 	}
 
+	@property
+	override bool hasMouseFocus(){
+		return mouseFocus;
+	}
 
 	override void resize(int[2] size){
 		super.resize(size);
