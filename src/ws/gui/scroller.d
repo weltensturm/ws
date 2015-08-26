@@ -31,16 +31,21 @@ class Scroller: Base {
 		
 	}
 
+	override void resizeRequest(Base child, int[2] size){
+		child.resize(size);
+		update;
+	}
+
 	override void onMouseButton(Mouse.button button, bool pressed, int x, int y){
 		auto maxOffset = (children[0].size.h - size.h).max(0);
 		if(button == Mouse.wheelDown && scroll < maxOffset){
 			if(pressed){
-				scrollSpeed += 10+scrollSpeed.abs;
+				scrollSpeed += 25+scrollSpeed.abs;
 				return;
 			}
 		}else if(button == Mouse.wheelUp && scroll > 0){
 			if(pressed){
-				scrollSpeed -= 10+scrollSpeed.abs;
+				scrollSpeed -= 25+scrollSpeed.abs;
 				return;
 			}
 		}else
@@ -57,7 +62,9 @@ class Scroller: Base {
 			scrollSpeed = scrollSpeed.eerp(0, 0, frameTime/100.0, frameTime/50.0);
 			update;
 		}
+		draw.clip(pos, size);
 		super.onDraw();
+		draw.noclip;
 	}
 
 }

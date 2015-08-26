@@ -35,7 +35,7 @@ class Text: Base {
 	override void onDraw(){
 		draw.setFont(font, fontSize);
 		draw.setColor(style.fg.normal);
-		draw.text(pos.a + [5,0], size.h, text);
+		draw.text(pos, size.h, text);
 	}
 
 }

@@ -195,6 +195,8 @@ class Base {
 		this.size = size;
 	}
 
+	void resizeRequest(Base child, int[2] size){}
+
 	void move(int[2] pos){
 		foreach(c; children)
 			c.move([c.pos.x+pos.x-this.pos.x, c.pos.y+pos.y-this.pos.y]);

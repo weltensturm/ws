@@ -13,57 +13,93 @@ import
 class DynamicList: Base {
 	
 	int padding = 5;
-	int entryHeight = 25;
 
 	override Base add(Base elem){
 		super.add(elem);
-		resize([size.w, 0]);
+		update;
 		return elem;
 	}
 
 	override void resize(int[2] size){
-		int y = size.h-padding-entryHeight;
+		int y = size.h-padding;
 		int h = padding;
 		foreach(c; children){
 			if(c.hidden)
 				continue;
-			c.move(pos.a + [padding, y]);
+			c.move(pos.a + [padding, y-c.size.h]);
 			c.resize([size.w-padding*2, c.size.h]);
 			y -= c.size.h + padding;
 			h += c.size.h + padding;
 		}
-		super.resize([size.w, h]);
+		super.resize(size);
+	}
+
+	void update(){
+		int h = padding;
+		foreach(i, c; children){
+			if(c.hidden)
+				continue;
+			h += c.size.h + padding;
+		}
+		if(parent)
+			parent.resizeRequest(this, [size.w, h]);
+	}
+
+	override void resizeRequest(Base child, int[2] size){
+		child.resize(size);
+		update;
 	}
 
 }
 
 
-class Tree: DynamicList {
+class Tree: Base {
 
-	string name;
-	bool expanded = true;
+	Button root;
+	bool expanded = false;
 	int inset = 15;
+	int padding = 5;
 
-	this(string name){
-		this.name = name;
-		auto button = new Button(name);
-		button.resize([5, entryHeight]);
-		button.leftClick ~= &toggle;
-		add(button);
+	this(Button root){
+		this.root = root;
+		root.leftClick ~= &toggle;
+		add(root);
+	}
+
+	override Base add(Base elem){
+		super.add(elem);
+		update;
+		return elem;
 	}
 
 	override void resize(int[2] size){
-		int y = size.h-padding-entryHeight;
+		int y = size.h-padding;
 		int h = padding;
 		foreach(i, c; children){
 			if(c.hidden)
 				continue;
-			c.move(pos.a + [padding + (i > 0 ? inset : 0), y]);
+			c.move(pos.a + [padding + (i > 0 ? inset : 0), y-c.size.h]);
 			c.resize([size.w-padding*2 - (i > 0 ? inset : 0), c.size.h]);
 			y -= c.size.h + padding;
 			h += c.size.h + padding;
 		}
-		Base.resize([size.w, h]);
+		super.resize(size);
+	}
+
+	void update(){
+		int h = padding;
+		foreach(i, c; children){
+			if(c.hidden)
+				continue;
+			h += c.size.h + padding;
+		}
+		if(parent)
+			parent.resizeRequest(this, [size.w, h]);
+	}
+
+	override void resizeRequest(Base child, int[2] size){
+		child.resize(size);
+		update;
 	}
 
 	void toggle(){
@@ -73,7 +109,7 @@ class Tree: DynamicList {
 				c.hide;
 			else
 				c.show;
-		resize(size);
+		update;
 	}
 
 }
