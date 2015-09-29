@@ -56,6 +56,8 @@ class XDraw: DrawEmpty {
 	ws.x.font.Font font;
 	ws.x.font.Font[string] fonts;
 
+	XRectangle[] clipStack;
+
 	this(Display* dpy, int screen, Window root, int w, int h){
 		this.dpy = dpy;
 		this.screen = screen;
@@ -117,14 +119,35 @@ class XDraw: DrawEmpty {
 
 	override void clip(int[2] pos, int[2] size){
 		pos[1] = this.size[1] - pos[1] - size[1];
+		if(clipStack.length){
+			auto rect = clipStack[$-1];
+			auto maxx = rect.x + rect.width;
+			auto maxy = rect.y + rect.height;
+			pos = [
+					pos.x.max(rect.x).min(maxx),
+					pos.y.max(rect.y).min(maxy)
+			];
+			size = [
+					(pos.x+size.w.min(rect.width)).min(maxx)-pos.x,
+					(pos.y+size.h.min(rect.height)).min(maxy)-pos.y
+			];
+		}
 		auto rect = XRectangle(cast(short)pos[0], cast(short)pos[1], cast(short)size[0], cast(short)size[1]);
 		XftDrawSetClipRectangles(xft, 0, 0, &rect, 1);
 		XSetClipRectangles(dpy, gc, 0, 0, &rect, 1, Unsorted);
+		clipStack ~= rect;
 	}
 
 	override void noclip(){
-		XSetClipMask(dpy, gc, None);
-		XftDrawSetClip(xft, null);
+		clipStack = clipStack[0..$-1];
+		if(clipStack.length){
+			auto rect = clipStack[$-1];
+			XftDrawSetClipRectangles(xft, 0, 0, &rect, 1);
+			XSetClipRectangles(dpy, gc, 0, 0, &rect, 1, Unsorted);
+		}else{
+			XSetClipMask(dpy, gc, None);
+			XftDrawSetClip(xft, null);
+		}
 	}
 
 	override void rect(int[2] pos, int[2] size){
@@ -144,7 +167,7 @@ class XDraw: DrawEmpty {
 			auto offsetRight = max(0.0,-offset)*fontHeight;
 			auto offsetLeft = max(0.0,offset-1)*fontHeight;
 			auto x = pos.x - min(1,max(0,offset))*width + offsetRight - offsetLeft;
-			auto y = this.size.h - pos.y - 1;
+			auto y = this.size.h - pos.y - 2;
 			XftDrawStringUtf8(xft, &color.rgb, font.xfont, cast(int)x.lround, cast(int)y.lround, text.toStringz, cast(int)text.length);
 		}
 	}

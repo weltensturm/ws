@@ -10,6 +10,7 @@ import
 	ws.string,
 	ws.list,
 	ws.gui.base,
+	ws.draw,
 	ws.wm.win32.api,
 	ws.wm.win32.wm,
 	ws.wm;
@@ -36,6 +37,7 @@ class Win32Window: Base {
 
 		bool hasMouse;
 		bool _hasFocus;
+		
 	}
 
 	this(WindowHandle handle){
@@ -72,6 +74,7 @@ class Win32Window: Base {
 		rawMouseDevice.hwndTarget = windowHandle;
 		if(!RegisterRawInputDevices(&rawMouseDevice, 1, RAWINPUTDEVICE.sizeof))
 			throw new Exception("Failed to register RID");
+		
 	}
 
 	@property
@@ -94,6 +97,13 @@ class Win32Window: Base {
 			return;
 		DestroyWindow(windowHandle);
 		super.hide;
+	}
+
+	override void resize(int[2] size){
+		super.resize(size);
+		glViewport(0,0,size.w,size.h);
+		if(draw)
+			draw.resize(size);
 	}
 
 	void setTitle(string title){
