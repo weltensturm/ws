@@ -214,7 +214,7 @@ class Shader: Loadable {
 					foreach(i, u; UniformTypes)
 						static if(is(u == T))
 							return UniformTypes[i-1];
-					throw new Exception("%s not an accepted uniform type".format(typeid(T)));
+					assert(false, "%s not an accepted uniform type".format(typeid(T).stringof));
 				}
 
 				int location;

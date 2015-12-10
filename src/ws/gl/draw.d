@@ -189,6 +189,7 @@ class Draw {
 class GlDraw: DrawEmpty {
 	
 	override void resize(int[2] size){
+		glViewport(0,0,size.w,size.h);
 		screen = size.to!(float[2]) ~ 1;
 	}
 	

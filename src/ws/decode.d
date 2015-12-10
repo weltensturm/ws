@@ -1,7 +1,7 @@
 
 module ws.decode;
 
-import std.stream, std.conv, ws.io, ws.string;
+import std.stdio, std.conv, ws.io, ws.string;
 
 
 private {
@@ -31,6 +31,18 @@ bool isNumberChar(char c){
 class Decode {
 
 
+	private {
+		void error(long line, string s){
+			throw new Exception("[" ~ tostring(line) ~ "]: " ~ s);
+		}
+
+		string queue;
+		string comments;
+		CallbackText callback;
+		bool wholeBlock = true;
+		File* myFile;
+	}
+
 	static void text(string text, CallbackText callback){
 		new Decode(false, text ~ '\n', callback);
 	}
@@ -59,7 +71,7 @@ class Decode {
 	this(bool isFile, string what, CallbackText cb){
 		callback = cb;
 		if(isFile){
-			myFile = new BufferedFile(what);
+			myFile = new File(what, "r");
 			getSome();
 		}else
 			queue = what;
@@ -75,13 +87,18 @@ class Decode {
 			return false;
 
 		size_t i = 0;
-		char c;
+		char[1] buf;
 		while(!myFile.eof() && i++ < 200){
-			myFile.read(c);
-			if(c == '\r') continue;
-			queue ~= c;
-			if(myFile.eof())
+			myFile.rawRead(buf);
+			if(buf.length){
+				auto c = buf[0];
+				if(c == '\r')
+					continue;
+				queue ~= c;
+			}else{
 				queue ~= '\n';
+				break;
+			}
 		}
 		return true;
 	}
@@ -154,17 +171,6 @@ class Decode {
 		}
 	}
 
-
-	private:
-		void error(long line, string s){
-			throw new Exception("[" ~ tostring(line) ~ "]: " ~ s);
-		}
-
-		string queue;
-		string comments;
-		CallbackText callback;
-		bool wholeBlock = true;
-		BufferedFile myFile;
 };
 
 

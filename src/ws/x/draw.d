@@ -40,6 +40,12 @@ class Cur {
 	}
 }
 
+class Icon {
+	XImage* img;
+	int width;
+	int height;
+}
+
 class XDraw: DrawEmpty {
 
 	int[2] size;
@@ -62,8 +68,7 @@ class XDraw: DrawEmpty {
 		this.dpy = dpy;
 		this.screen = screen;
 		this.root = root;
-		w = w;
-		h = h;
+		size = [w,h];
 		drawable = XCreatePixmap(dpy, root, w, h, DefaultDepth(dpy, screen));
 		gc = XCreateGC(dpy, root, 0, null);
 		XSetLineAttributes(dpy, gc, 1, LineSolid, CapButt, JoinMiter);
@@ -93,6 +98,7 @@ class XDraw: DrawEmpty {
 	}
 
 	override void setFont(string font, int size){
+		font ~= ":size=%d".format(size);
 		if(font !in fonts)
 			fonts[font] = new ws.x.font.Font(dpy, screen, font);
 		this.font = fonts[font];
@@ -177,9 +183,27 @@ class XDraw: DrawEmpty {
 		this.text(pos, text, offset);
 	}
 
+	struct IconQueueData {
+		Icon icon;
+		int x;
+		int y;
+	}
+
+	IconQueueData[] iconQueue;
+
+	void icon(Icon icon, int x, int y){
+		iconQueue ~= IconQueueData(icon, x, y);
+		//XPutImage(dpy, drawable, gc, icon.img, 0, 0, x, y, cast(uint)icon.width, cast(uint)icon.height);
+	}
+
 	override void finishFrame(){
+		foreach(q; iconQueue){
+			XPutImage(dpy, drawable, gc, q.icon.img, 0, 0, q.x, q.y, cast(uint)q.icon.width, cast(uint)q.icon.height);
+		}
 		XCopyArea(dpy, drawable, root, gc, 0, 0, size.w, size.h, 0, 0);
+		//iconQueue = [];
 		XSync(dpy, False);
 	}
 
 }
+

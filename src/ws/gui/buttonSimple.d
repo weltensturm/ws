@@ -1,4 +1,4 @@
-module ws.gui.button;
+module ws.gui.buttonSimple;
 
 import
 	ws.event,
@@ -14,37 +14,13 @@ class Button: Base {
 	Event!() leftClick;
 	Event!() rightClick;
 
-	Text title;
+	string text;
 	bool pressed;
 	bool mouseFocus;
-	string m_font = "sans";
-	int m_font_size = 12;
+	string font = "sans";
+	int fontSize = 12;
 
-	@property string font(string s=""){
-		if(s.length){
-			m_font = s;
-			title.setFont(m_font, m_font_size);
-		}
-		return m_font;
-	}
-
-	@property int fontSize(int i=0){
-		if(i > 0){
-			m_font_size = i;
-			title.setFont(m_font, m_font_size);
-		}
-		return m_font_size;
-	}
-
-	@property void text(string s){
-		title.text = s;
-	}
-
-	@property string text(){
-		return title.text;
-	}
-
-	this(string t){
+	this(string text){
 		leftClick = new Event!();
 		rightClick = new Event!();
 		Style style;
@@ -58,15 +34,13 @@ class Button: Base {
 				[1, 1, 1, 1],
 				[1, 1, 1, 1]
 		);
-		title = addNew!Text;
-		title.text = t;
+		this.text = text;
 		setStyle(style);
 	}
 
 
 	override void setStyle(Style style){
 		super.setStyle(style);
-		title.style = style;
 	}
 
 
@@ -80,12 +54,13 @@ class Button: Base {
 				(mouseFocus ? style.fg.hover
 						: style.fg.normal));
 		+/
+		draw.setColor(style.fg);
+		draw.text(pos, text);
 		super.onDraw();
 	}
 
 	override void resize(int[2] size){
-		title.resize(size);
-		//fontSize = cast(int)(size.h/1.8);
+		fontSize = cast(int)(size.h/1.8);
 		super.resize(size);
 	}
 

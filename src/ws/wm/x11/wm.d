@@ -77,6 +77,7 @@ class X11WindowManager: BaseWindowManager {
 	T_glXCreateContextAttribsARB glXCreateContextAttribsARB;
 
 	void delegate(XEvent*)[][int][x11.X.Window] handler;
+	void delegate(XEvent*)[][int] handlerAll;
 	
 	~this(){
 		XCloseDisplay(displayHandle);
@@ -93,6 +94,9 @@ class X11WindowManager: BaseWindowManager {
 					win.processEvent(e);
 				}
 			}
+			if(e.type in handlerAll)
+				foreach(handler; handlerAll[e.type])
+					handler(&e);
 			if(e.xany.window in handler){
 				auto handlerWindow = handler[e.xany.window];
 				if(e.type in handlerWindow)

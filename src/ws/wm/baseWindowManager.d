@@ -29,7 +29,7 @@ class BaseWindowManager {
 		windows ~= window;
 	}
 
-	void removeWindow(Window window){
+	void remove(Window window){
 		windows.remove(window);
 	}
 

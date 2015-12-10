@@ -91,6 +91,9 @@ class X11Window: Base {
 		onKeyboardFocus(true);
 	}
 	
+	override void onShow(){
+		isActive = true;
+	}
 	
 	override void hide(){
 		if(!isActive)
@@ -100,6 +103,10 @@ class X11Window: Base {
 		//wm.windows.remove(this);
 	}
 	
+	override void onHide(){
+		isActive = false;
+	}
+
 	void swapBuffers(){
 		glXSwapBuffers(wm.displayHandle, cast(uint)windowHandle);
 	}
@@ -214,7 +221,7 @@ class X11Window: Base {
 				wm.displayHandle, windowHandle, netWmName, 0, 0x77777777, False, utf8,
 				&actType, &actFormat, &nItems, &bytes, &data
 		);
-		return to!string(data);
+		return to!string(cast(char*)data);
 	}
 	
 	GraphicsContext gcShare(){
@@ -282,7 +289,6 @@ class X11Window: Base {
 
 	override void resize(int[2] size){
 		super.resize(size);
-		glViewport(0,0,size.w,size.h);
 		if(draw)
 			draw.resize(size);
 	}

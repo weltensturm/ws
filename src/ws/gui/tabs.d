@@ -55,10 +55,12 @@ class Tabs: Base {
 	}
 
 	protected string font = "Ubuntu-B";
+	protected int fontSize = 12;
 
 	Page addPage(TabButton button, Base gui){
 		add(button);
 		button.font = font;
+		button.fontSize = fontSize;
 		button.setStyle = buttonStyle;
 		button.resize(buttonSize);
 		size_t current = pages.length;
