@@ -216,12 +216,13 @@ class X11Window: Base {
 		ubyte* data;
 		netWmName = XInternAtom(wm.displayHandle, "_NET_WM_NAME".toStringz, False);
 		utf8 = XInternAtom(wm.displayHandle, "UTF8_STRING".toStringz, False);
-		
 		XGetWindowProperty(
 				wm.displayHandle, windowHandle, netWmName, 0, 0x77777777, False, utf8,
 				&actType, &actFormat, &nItems, &bytes, &data
 		);
-		return to!string(cast(char*)data);
+		auto text = to!string(cast(char*)data);
+		XFree(data);
+		return text;
 	}
 	
 	GraphicsContext gcShare(){
@@ -247,7 +248,9 @@ class X11Window: Base {
 			case KeyPress:
 				onKeyboard(cast(Keyboard.key)XLookupKeysym(&e.xkey,0), true);
 				char[25] str;
-				size_t l = Xutf8LookupString(inputContext, &e.xkey, str.ptr, 25, null, null);
+				KeySym ks;
+				Status st;
+				size_t l = Xutf8LookupString(inputContext, &e.xkey, str.ptr, 25, &ks, &st);
 				if(l){
 					string s;
 					for(size_t i=0; i<l; ++i)

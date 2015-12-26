@@ -7,8 +7,11 @@ import
 	std.string,
 	std.algorithm,
 	std.math,
+	std.conv,
 	x11.X,
 	x11.Xlib,
+	x11.extensions.render,
+	x11.extensions.Xrender,
 	ws.draw,
 	ws.bindings.xft,
 	ws.gui.point,
@@ -19,10 +22,13 @@ class Color {
 
 	ulong pix;
 	XftColor rgb;
+	long[4] rgba;
 
-	this(Display* dpy, int screen, string name){
+	this(Display* dpy, int screen, long[4] values){
 		Colormap cmap = DefaultColormap(dpy, screen);
 		Visual* vis = DefaultVisual(dpy, screen);
+		rgba = values;
+		auto name = "#%02x%02x%02x".format(values[0], values[1], values[2]);
 		if(!XftColorAllocName(dpy, vis, cmap, name.toStringz, &rgb))
 			throw new Exception("Cannot allocate color " ~ name);
 		pix = rgb.pixel;
@@ -57,7 +63,7 @@ class XDraw: DrawEmpty {
 	GC gc;
 
 	Color color;
-	Color[string] colors;
+	Color[long[4]] colors;
 
 	ws.x.font.Font font;
 	ws.x.font.Font[string] fonts;
@@ -109,18 +115,19 @@ class XDraw: DrawEmpty {
 	}
 
 	override void setColor(float[3] color){
-		auto name = "#%02x%02x%02x".format(
-			(color[0]*255).lround.min(255).max(0),
-			(color[1]*255).lround.min(255).max(0),
-			(color[2]*255).lround.min(255).max(0)
-		);
-		if(name !in colors)
-			colors[name] = new Color(dpy, screen, name);
-		this.color = colors[name];
+		setColor([color[0], color[1], color[2], 1]);
 	}
 
 	override void setColor(float[4] color){
-		setColor(color[0..3]);
+		long[4] values = [
+			(color[0]*255).lround.max(0).min(255),
+			(color[1]*255).lround.max(0).min(255),
+			(color[2]*255).lround.max(0).min(255),
+			(color[3]*255).lround.max(0).min(255)
+		];
+		if(values !in colors)
+			colors[values] = new Color(dpy, screen, values);
+		this.color = colors[values];
 	}
 
 	override void clip(int[2] pos, int[2] size){
@@ -159,6 +166,14 @@ class XDraw: DrawEmpty {
 	override void rect(int[2] pos, int[2] size){
 		XSetForeground(dpy, gc, color.pix);
 		XFillRectangle(dpy, drawable, gc, pos.x, this.size.h-size.h-pos.y, size.w, size.h);
+		/+
+		XRenderColor color;
+		color.red =   this.color.rgba[0].to!ushort;
+		color.green = this.color.rgba[1].to!ushort;
+		color.blue =  this.color.rgba[2].to!ushort;
+		color.alpha = this.color.rgba[3].to!ushort;
+		XRenderFillRectangle(dpy, PictOpSrc, picture, &color, pos.x, this.size.h-size.h-pos.y, size.w, size.h);
+		+/
 	}
 
 	override void rectOutline(int[2] pos, int[2] size){

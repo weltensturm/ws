@@ -38,6 +38,16 @@ class Property(ulong Format, bool List){
 		return null;
 	}
 
+	void request(Type[] data){
+		XEvent e;
+		e.type = ClientMessage;
+		e.xclient.window = window;
+		e.xclient.message_type = property;
+		e.xclient.format = 32;
+		e.xclient.data.l[0..data.length] = cast(long[])data;
+		XSendEvent(wm.displayHandle, XDefaultRootWindow(wm.displayHandle), false, SubstructureNotifyMask|SubstructureRedirectMask, &e);
+	}
+	
 	static if(List)
 		Type[] get(){
 			ulong count;
@@ -46,7 +56,7 @@ class Property(ulong Format, bool List){
 			XFree(p);
 			return d;
 		}
-	else
+	else{
 		Type get(){
 			ulong n=1;
 			auto p = raw(n);
@@ -56,6 +66,10 @@ class Property(ulong Format, bool List){
 			XFree(p);
 			return d;
 		}
+		void set(Type data){
+			XChangeProperty(wm.displayHandle, window, property, Format, 32, PropModeReplace, cast(ubyte*)&data, 1);
+		}
+	}
 
 
 }

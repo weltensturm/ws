@@ -26,13 +26,6 @@ extern(C){
 		FcCharSet* charset;
 		FcPattern* pattern;
 	}
-	struct XRenderColor {
-		ushort   red;
-	    ushort   green;
-	    ushort   blue;
-	    ushort   alpha;
-	}
-
 	struct XftDraw{}
 
 	void XftFontClose(Display*, XftFont*);

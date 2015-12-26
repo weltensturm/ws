@@ -2,6 +2,7 @@ module ws.gui.text;
 
 import
 	std.utf,
+	std.conv,
 	ws.io,
 	ws.list,
 	ws.gl.gl,
@@ -59,7 +60,7 @@ class Text: Base {
 			)
 				continue;
 			glBindTexture(GL_TEXTURE_2D, g.glyph.tex);
-			fp = [cast(int)g.pos.x + pos.x, cast(int)g.pos.y + pos.y, 0];
+			fp = [cast(int)g.pos.x + pos.x + font.size, cast(int)g.pos.y + pos.y, 0];
 			shader["Offset"].set(fp);
 			g.glyph.vao.draw();
 		}
@@ -119,17 +120,17 @@ class Text: Base {
 			if(!begin)
 				return;
 			it = begin;//(it ? it : begin());
-			Point start = Point(cast(int)(font.size*0.3), cast(int)(cast(int)(font.size*1.4)*lines + font.size*0.4));
+			Point start = Point(font.size.to!int, (font.size*1.4*lines + font.size*0.4).to!int);
 			if(it.prev){
 				start = 
 					it.prev.get().c == '\n'
-					? Point(2, it.prev.get().pos.y - cast(int)(font.size*1.4))
+					? Point(cast(int)(font.size), it.prev.get().pos.y - cast(int)(font.size*1.4))
 					: it.prev.get().pos + Point(cast(int)it.prev.get().glyph.advance, 0);
 			}
 			while(it){
 				it.get().pos = start;
 				if(it.get().c=='\n'){
-					start.x = 2;
+					start.x = cast(int)(font.size);
 					start.y -= cast(int)(font.size*1.4);
 				}else{
 					start.x += it.get().glyph.advance;
