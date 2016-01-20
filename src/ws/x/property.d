@@ -2,6 +2,7 @@ module ws.x.property;
 
 import
 	std.string,
+	std.conv,
 	x11.X,
 	x11.Xlib,
 	x11.Xutil,
@@ -19,6 +20,8 @@ class Property(ulong Format, bool List){
 		alias Type = Atom;
 	static if(Format == XA_WINDOW)
 		alias Type = x11.X.Window;
+	static if(Format == XA_STRING)
+		alias Type = string;
 
 	this(x11.X.Window window, string name){
 		this.window = window;
@@ -31,8 +34,7 @@ class Property(ulong Format, bool List){
 		ulong dl;
 		ubyte* p;
 		Atom da;
-		if(XGetWindowProperty(wm.displayHandle, window, property, 0L, List ? long.max : 1, 0, Format,
-		                      &da, &di, &count, &dl, &p) == 0 && p){
+		if(XGetWindowProperty(wm.displayHandle, window, property, 0L, List || is(Type == string) ? long.max : 1, 0, is(Type == string) ? XInternAtom(wm.displayHandle, "UTF8_STRING", False) : Format, &da, &di, &count, &dl, &p) == 0 && p){
 			return p;
 		}
 		return null;
@@ -57,18 +59,34 @@ class Property(ulong Format, bool List){
 			return d;
 		}
 	else{
-		Type get(){
-			ulong n=1;
-			auto p = raw(n);
-			if(!p)
-				return Type.init;
-			auto d = *(cast(Type*)p);
-			XFree(p);
-			return d;
+		static if(is(Type == string)){
+			Type get(){
+				ulong n=1;
+				auto p = raw(n);
+				if(!p)
+					return Type.init;
+				auto d = (cast(char*)p)[0..n].to!string;
+				XFree(p);
+				return d;
+			}
+			void set(Type data){
+				XChangeProperty(wm.displayHandle, window, property, XInternAtom(wm.displayHandle, "UTF8_STRING", False), 8, PropModeReplace, cast(ubyte*)data.toStringz, cast(int)data.length);
+			}
+		}else{
+			Type get(){
+				ulong n=1;
+				auto p = raw(n);
+				if(!p)
+					return Type.init;
+				auto d = *(cast(Type*)p);
+				XFree(p);
+				return d;
+			}
+			void set(Type data){
+				XChangeProperty(wm.displayHandle, window, property, Format, 32, PropModeReplace, cast(ubyte*)&data, 1);
+			}
 		}
-		void set(Type data){
-			XChangeProperty(wm.displayHandle, window, property, Format, 32, PropModeReplace, cast(ubyte*)&data, 1);
-		}
+
 	}
 
 

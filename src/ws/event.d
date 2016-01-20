@@ -5,9 +5,13 @@ import ws.list;
 class Event(Args...){
 	
 	this(){
-		list = new List!(void delegate(Args));
+		unbind;
 	}
 	
+	void unbind(){
+		list = new List!(void delegate(Args));
+	}
+
 	void opOpAssign(string op)(void delegate(Args) d){
 		mixin("list " ~ op ~ "= d;");
 	}

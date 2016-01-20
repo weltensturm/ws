@@ -55,19 +55,23 @@ class DynamicList: Base {
 
 class Tree: Base {
 
-	Button root;
+	Button expander;
 	bool expanded = false;
 	int inset = 15;
 	int padding = 5;
 
-	this(Button root){
-		this.root = root;
-		root.leftClick ~= &toggle;
-		add(root);
+	this(Button expander){
+		this.expander = expander;
+		expander.leftClick ~= &toggle;
+		add(expander);
 	}
 
 	override Base add(Base elem){
 		super.add(elem);
+		if(!expanded && elem != expander)
+			elem.hide;
+		else
+			elem.show;
 		update;
 		return elem;
 	}
@@ -99,6 +103,11 @@ class Tree: Base {
 
 	override void resizeRequest(Base child, int[2] size){
 		child.resize(size);
+		update;
+	}
+
+	override void remove(Base child){
+		super.remove(child);
 		update;
 	}
 

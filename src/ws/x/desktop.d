@@ -28,12 +28,15 @@ class DesktopEntry {
 	string[] categories;
 
 	this(string text){
+		bool validSection;
 		foreach(line; text.splitLines){
-			if(line.startsWith("Exec="))
+			if(line.startsWith("["))
+				validSection = line == "[Desktop Entry]";
+			else if(validSection && line.startsWith("Exec="))
 				exec = line.chompPrefix("Exec=");
-			if(line.startsWith("Name="))
+			else if(validSection && line.startsWith("Name="))
 				name = line.chompPrefix("Name=");
-			if(line.startsWith("Categories="))
+			else if(validSection && line.startsWith("Categories="))
 				categories = line.chompPrefix("Categories=").split(";").filter!"a.length".array;
 		}
 	}

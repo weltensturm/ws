@@ -88,7 +88,7 @@ class X11WindowManager: BaseWindowManager {
 			XEvent e;
 			XNextEvent(wm.displayHandle, &e);
 			foreach(win; wm.windows){
-				if(e.xany.window == win.windowHandle && win.isActive){
+				if(e.xany.window == win.windowHandle){
 					activeWindow = win;
 					win.gcActivate;
 					win.processEvent(e);

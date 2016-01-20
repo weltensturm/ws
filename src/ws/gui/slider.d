@@ -15,6 +15,15 @@ class Slider: Base {
 
 	Event!float onSlide;
 
+	this(){
+		onSlide = new Event!float;
+	}
+
+	this(float value, float min, float max){
+		this();
+		set(value, min, max);
+	}
+
 	override void onMouseButton(Mouse.button b, bool p, int x, int y){
 		if(p)
 			slide(x, y);
@@ -44,10 +53,6 @@ class Slider: Base {
 		draw.setColor([0.1,0.1,0.1,1]);
 		//draw.rect(pos + Point(x-pos.x, 2), Point(2, size.y-4));
 		draw.rect(pos.a + [x-pos.x-width/2+2, 5], [width-4,width-4]);
-	}
-
-	this(){
-		onSlide = new Event!float;
 	}
 
 	void setValue(float v){

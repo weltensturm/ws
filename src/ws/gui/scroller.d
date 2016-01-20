@@ -59,7 +59,7 @@ class Scroller: Base {
 		frameLast = Clock.currSystemTick.msecs;
 		if(scrollSpeed){
 			scroll = (scroll + scrollSpeed*frameTime/60.0).min(children[0].size.h - size.h).max(0);
-			scrollSpeed = scrollSpeed.eerp(0, 0, frameTime/100.0, frameTime/50.0);
+			scrollSpeed = scrollSpeed.eerp(0, 0, frameTime/100.0, frameTime/25.0);
 			update;
 		}
 		draw.clip(pos, size);
