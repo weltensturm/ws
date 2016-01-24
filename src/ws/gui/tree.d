@@ -5,6 +5,7 @@ import
 	std.math,
 	std.algorithm,
 	std.conv,
+	ws.animation,
 	ws.gl.draw,
 	ws.gui.base,
 	ws.gui.button;
@@ -52,58 +53,59 @@ class DynamicList: Base {
 
 }
 
+double sinApproach(double a){
+	return (sin((a-0.5)*PI)+1)/2;
+}
 
 class Tree: Base {
 
 	Button expander;
 	bool expanded = false;
-	int inset = 15;
-	int padding = 5;
+	int padding = 0;
+	int inset = 0;
+	int tail = 10;
+
+	Animation animation;
 
 	this(Button expander){
 		this.expander = expander;
+		animation = new Animation(1, 1, 0.3, &sinApproach);
 		expander.leftClick ~= &toggle;
 		add(expander);
 	}
 
 	override Base add(Base elem){
 		super.add(elem);
-		if(!expanded && elem != expander)
-			elem.hide;
-		else
-			elem.show;
 		update;
 		return elem;
 	}
 
 	override void resize(int[2] size){
-		int y = size.h-padding;
-		int h = padding;
-		foreach(i, c; children){
-			if(c.hidden)
-				continue;
-			c.move(pos.a + [padding + (i > 0 ? inset : 0), y-c.size.h]);
-			c.resize([size.w-padding*2 - (i > 0 ? inset : 0), c.size.h]);
-			y -= c.size.h + padding;
-			h += c.size.h + padding;
+		int y = padding;
+		expander.move(pos.a+[0,size.h-expander.size.h]);
+		expander.resize([size.w, expander.size.h]);
+		foreach_reverse(i, c; children[1..$]){
+			c.move(pos.a + [padding + inset, y+tail]);
+			c.resize([size.w-padding*2 - inset, c.size.h]);
+			y += c.size.h + padding;
 		}
 		super.resize(size);
 	}
 
 	void update(){
-		int h = padding;
-		foreach(i, c; children){
-			if(c.hidden)
-				continue;
+		int h = padding + (expanded ? tail : 0);
+		foreach(i, c; children[0..expanded ? $ : 1])
 			h += c.size.h + padding;
-		}
-		if(parent)
-			parent.resizeRequest(this, [size.w, h]);
+		if(parent && size.h != animation.calculate)
+			parent.resizeRequest(this, [size.w, animation.calculate.lround.to!int]);
+		if(h != animation.end)
+			animation.change(h);
 	}
 
 	override void resizeRequest(Base child, int[2] size){
 		child.resize(size);
 		update;
+		animation.replace(animation.end);
 	}
 
 	override void remove(Base child){
@@ -113,11 +115,17 @@ class Tree: Base {
 
 	void toggle(){
 		expanded = !expanded;
-		foreach(c; children[1..$])
-			if(!expanded)
-				c.hide;
-			else
-				c.show;
+		update;
+	}
+
+	override void onDraw(){
+		animation.update;
+		children[0].onDraw;
+		if(expanded || size.h != children[0].size.h){
+			draw.clip(pos, [size.x, size.h-expander.size.h]);
+			super.onDraw;
+			draw.noclip;
+		}
 		update;
 	}
 

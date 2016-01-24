@@ -21,9 +21,9 @@ class DrawEmpty {
 
 	int fontHeight(){assert(false, "not implemented");}
 
-	void text(int[2] pos, string text, double offset=-1){assert(false, "not implemented");}
+	int text(int[2] pos, string text, double offset=-1){assert(false, "not implemented");}
 	
-	void text(int[2] pos, int h, string text, double offset=-0.2){assert(false, "not implemented");}
+	int text(int[2] pos, int h, string text, double offset=-0.2){assert(false, "not implemented");}
 
 	int width(string text){assert(false, "not implemented");}
 

@@ -17,10 +17,12 @@ T asqrt(T)(T n){
 ref T x(T)(T[] array){
 	return array[0];
 }
+alias w = x;
 
 ref T y(T)(T[] array){
 	return array[1];
 }
+alias h = y;
 
 ref T z(T)(T[] array){
 	return array[2];

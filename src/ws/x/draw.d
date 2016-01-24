@@ -181,7 +181,7 @@ class XDraw: DrawEmpty {
 		XDrawRectangle(dpy, drawable, gc, pos.x, this.size.h-pos.y-size.h, size.w, size.h);
 	}
 
-	override void text(int[2] pos, string text, double offset=-0.2){
+	override int text(int[2] pos, string text, double offset=-0.2){
 		if(text.length){
 			auto width = width(text);
 			auto fontHeight = font.h;
@@ -190,12 +190,14 @@ class XDraw: DrawEmpty {
 			auto x = pos.x - min(1,max(0,offset))*width + offsetRight - offsetLeft;
 			auto y = this.size.h - pos.y - 2;
 			XftDrawStringUtf8(xft, &color.rgb, font.xfont, cast(int)x.lround, cast(int)y.lround, text.toStringz, cast(int)text.length);
+			return this.width(text);
 		}
+		return 0;
 	}
 	
-	override void text(int[2] pos, int h, string text, double offset=-0.2){
+	override int text(int[2] pos, int h, string text, double offset=-0.2){
 		pos.y += ((h-font.h)/2.0).lround;
-		this.text(pos, text, offset);
+		return this.text(pos, text, offset);
 	}
 
 	struct IconQueueData {

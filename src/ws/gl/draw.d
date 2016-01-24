@@ -263,7 +263,7 @@ class GlDraw: DrawEmpty {
 		batchLine.draw();
 	}
 
-	override void text(int[2] pos, string text, double offset=-0.2){
+	override int text(int[2] pos, string text, double offset=-0.2){
 		if(!font)
 			exception("no font active");
 		auto s = activateShader(type.text);
@@ -288,11 +288,12 @@ class GlDraw: DrawEmpty {
 			g.vao.draw();
 			x += g.advance;
 		}
+		return x.to!int-pos.x;
 	}
 
-	override void text(int[2] pos, int h, string text, double offset=-0.2){
+	override int text(int[2] pos, int h, string text, double offset=-0.2){
 		pos[1] += cast(int)((h-font.size)/2.0);
-		this.text(pos, text, offset);
+		return this.text(pos, text, offset);
 	}
 
 	static float[3] screen = [10,10,1];

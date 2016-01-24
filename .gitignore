@@ -4,3 +4,5 @@ dub.selections.json
 .dub/*
 .buildpath
 .project
+*.swp
+*.sync-conflict*

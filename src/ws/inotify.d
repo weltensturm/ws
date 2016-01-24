@@ -55,8 +55,7 @@ class Inotify {
     WatchStruct* addWatch(string directory, bool recursive){
         int wd = inotify_add_watch(inotify, directory.toStringz, IN_CLOSE_WRITE | IN_MOVED_TO | IN_CREATE | IN_MOVED_FROM | IN_DELETE);
         if(wd < 0){
-            writeln("inotify error in ", directory);
-            return null;
+            throw new Exception("inotify error in ", directory);
         }
         auto watcher = new WatchStruct;
         watcher.id = wd;

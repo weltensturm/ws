@@ -33,6 +33,7 @@ class Scroller: Base {
 
 	override void resizeRequest(Base child, int[2] size){
 		child.resize(size);
+		scroll = scroll.min(size.h - this.size.h).max(0);
 		update;
 	}
 
