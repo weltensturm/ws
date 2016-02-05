@@ -9,8 +9,8 @@ import
 
 class Animation {
 
-	double time;
-	void update(){
+	static double time;
+	static void update(){
 		time = Clock.currSystemTick.msecs/1000.0;
 	}
 

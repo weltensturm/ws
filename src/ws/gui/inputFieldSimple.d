@@ -29,8 +29,9 @@ class InputField: Base {
 	}
 
 	override void onKeyboard(dchar c){
-		if(hasFocus && !blockChar){
+		if(!blockChar){
 			text = text[0..cursor] ~ c.to!string ~ text[cursor..$];
+			cursor++;
 			blockChar = false;
 		}
 	}
@@ -48,7 +49,7 @@ class InputField: Base {
 				break;
 				
 			case Keyboard.del:
-				if(cursor < text.length-1){
+				if(cursor < text.length){
 					text = text[0..cursor] ~ text[cursor+1..$];
 				}
 				break;
@@ -74,7 +75,7 @@ class InputField: Base {
 				if(Keyboard.get(Keyboard.control))
 					while(cursor > 0 && text[cursor-1] != ' ')
 						--cursor;
-				else
+				else if(cursor > 0)
 					--cursor;
 				break;
 				
@@ -110,6 +111,7 @@ class InputField: Base {
 			draw.setColor([1,1,1,alpha]);
 			draw.text(pos.a + [2, 0], size.h, error);
 		}
+		draw.setColor([1,1,1]);
 		draw.text(pos, size.h, text);
 	}
 

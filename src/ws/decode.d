@@ -49,7 +49,11 @@ class Decode {
 
 
 	static void file(string path, CallbackText callback){
-		new Decode(true, path, callback);
+		try
+			new Decode(true, path, callback);
+		catch(Exception e){
+			throw new Exception("Error in file \"" ~ path ~ "\"", e);
+		}
 	}
  
 

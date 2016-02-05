@@ -55,14 +55,11 @@ class Button: Base {
 						: style.fg.normal));
 		+/
 		draw.setColor(style.fg);
-		draw.text(pos, text);
+		draw.setFont(font, fontSize);
+		draw.text(pos, size.h, text);
 		super.onDraw();
 	}
 
-	override void resize(int[2] size){
-		fontSize = cast(int)(size.h/1.8);
-		super.resize(size);
-	}
 
 	override void onMouseButton(Mouse.button button, bool p, int x, int y){
 		super.onMouseButton(button, p, x, y);
@@ -81,6 +78,7 @@ class Button: Base {
 		mouseFocus = focus;
 		if(!focus)
 			pressed = false;
+		super.onMouseFocus(focus);
 	}
 
 

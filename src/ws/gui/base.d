@@ -36,6 +36,7 @@ class Base {
 	DrawEmpty _draw;
 	bool[int] buttons;
 	bool dragging;
+	bool drawOutside = true;
 
 	T addNew(T, Args...)(Args args){
 		T e = new T(args);
@@ -228,7 +229,8 @@ class Base {
 	void onMouseMove(int x, int y){
 		bool foundFocus = false;
 		cursorPos = [x,y];
-		if(dragging){
+		if(dragging || buttons.values.any && !dragging){
+			dragging = true;
 			foundFocus = true;
 		}else{
 			auto child = findChild(x, y);
@@ -262,8 +264,7 @@ class Base {
 		if(!buttons.values.any && dragging){
 			dragging = false;
 			onMouseMove(x, y);
-		}else if(buttons.values.any && !dragging)
-			dragging = true;
+		}
 	};
 	
 	void onMouseFocus(bool f){
@@ -288,7 +289,12 @@ class Base {
 	
 	void onDraw(){
 		foreach_reverse(c; children)
-			if(!c.hidden)
+			if(!c.hidden &&
+					(drawOutside
+					|| c.pos.x-c.size.w > pos.x
+					&& c.pos.x < pos.x+size.w
+					&& c.pos.y-c.size.h > pos.y
+					&& c.pos.y < pos.y+size.h))
 				c.onDraw;
 	}
 	

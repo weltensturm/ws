@@ -8,7 +8,7 @@ import
 	ws.animation,
 	ws.gl.draw,
 	ws.gui.base,
-	ws.gui.button;
+	ws.gui.buttonSimple;
 
 
 class DynamicList: Base {
@@ -69,8 +69,9 @@ class Tree: Base {
 
 	this(Button expander){
 		this.expander = expander;
-		animation = new Animation(1, 1, 0.3, &sinApproach);
+		animation = new Animation(expander.size.h, expander.size.h, 0.3, &sinApproach);
 		expander.leftClick ~= &toggle;
+		size = [size.w, expander.size.h];
 		add(expander);
 	}
 
@@ -119,7 +120,6 @@ class Tree: Base {
 	}
 
 	override void onDraw(){
-		animation.update;
 		children[0].onDraw;
 		if(expanded || size.h != children[0].size.h){
 			draw.clip(pos, [size.x, size.h-expander.size.h]);

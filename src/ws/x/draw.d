@@ -47,9 +47,8 @@ class Cur {
 }
 
 class Icon {
-	XImage* img;
-	int width;
-	int height;
+	Picture picture;
+	int[2] size;
 }
 
 class XDraw: DrawEmpty {
@@ -70,6 +69,8 @@ class XDraw: DrawEmpty {
 
 	XRectangle[] clipStack;
 
+	Picture frontBuffer;
+
 	this(Display* dpy, int screen, Window root, int w, int h){
 		this.dpy = dpy;
 		this.screen = screen;
@@ -81,6 +82,12 @@ class XDraw: DrawEmpty {
 		auto cmap = DefaultColormap(dpy, screen);
 		auto vis = DefaultVisual(dpy, screen);
 		xft = XftDrawCreate(dpy, drawable, vis, cmap);
+		
+		auto format = XRenderFindVisualFormat(dpy, vis);
+		XRenderPictureAttributes pa;
+		pa.subwindow_mode = IncludeInferiors;
+		frontBuffer = XRenderCreatePicture(dpy, root, format, CPSubwindowMode, &pa);
+
 	}
 
 	override int width(string text){
@@ -200,25 +207,62 @@ class XDraw: DrawEmpty {
 		return this.text(pos, text, offset);
 	}
 
-	struct IconQueueData {
-		Icon icon;
-		int x;
-		int y;
+	void delegate()[] iconQueue;
+
+	Icon icon(ubyte[] data, int[2] size){
+		assert(data.length == size.w*size.h*4, "%s != %s*%s*4".format(data.length, size.w, size.h));
+		auto res = new Icon;
+		auto img = XCreateImage(
+				dpy,
+				cast(Visual*)CopyFromParent,
+				32,
+				ZPixmap,
+				0,
+				cast(char*)data.ptr,
+				cast(uint)size.w,
+				cast(uint)size.h,
+				32,
+				0
+		);
+
+		auto pixmap = XCreatePixmap(dpy, drawable, size.w, size.h, 32);
+		assert(pixmap);
+     	XRenderPictFormat *pictformat = XRenderFindStandardFormat(dpy, PictStandardARGB32);
+     	XRenderPictureAttributes attributes;
+     	res.picture = XRenderCreatePicture(dpy, pixmap, pictformat, 0, &attributes);
+		XRenderSetPictureFilter(dpy, res.picture, "best", null, 0);
+		auto gc = XCreateGC(dpy, pixmap, 0, null);
+	    XPutImage(dpy, pixmap, gc, img, 0, 0, 0, 0, size.w, size.h);
+		XFreePixmap(dpy, pixmap);
+
+		res.size = size;
+		return res;
+		/+
+		res.pixmap = XCreatePixmap(wm.displayHandle, root, DisplayWidth(wm.displayHandle, 0), DisplayHeight(wm.displayHandle, 0), DefaultDepth(wm.displayHandle, 0));
+		res.picture = XRenderCreatePicture(wm.displayHandle, pixmap, format, 0, null);
+		XFreePixmap(wm.displayHandle, res.pixmap);
+		+/
+		
 	}
 
-	IconQueueData[] iconQueue;
-
-	void icon(Icon icon, int x, int y){
-		iconQueue ~= IconQueueData(icon, x, y);
+	void icon(Icon icon, int x, int y, double scale){
+		iconQueue ~= {
+			XTransform xform = {[
+				[XDoubleToFixed( 1 ), XDoubleToFixed( 0 ), XDoubleToFixed( 0 )],
+				[XDoubleToFixed( 0 ), XDoubleToFixed( 1 ), XDoubleToFixed( 0 )],
+				[XDoubleToFixed( 0 ), XDoubleToFixed( 0 ), XDoubleToFixed( scale )]
+			]};
+			XRenderSetPictureTransform(dpy, icon.picture, &xform);
+			XRenderComposite(dpy, PictOpOver, icon.picture, None, frontBuffer, 0, 0, 0, 0, x, y, (icon.size.w*scale).to!int, (icon.size.h*scale).to!int);
+		};
 		//XPutImage(dpy, drawable, gc, icon.img, 0, 0, x, y, cast(uint)icon.width, cast(uint)icon.height);
 	}
 
 	override void finishFrame(){
-		foreach(q; iconQueue){
-			XPutImage(dpy, drawable, gc, q.icon.img, 0, 0, q.x, q.y, cast(uint)q.icon.width, cast(uint)q.icon.height);
-		}
 		XCopyArea(dpy, drawable, root, gc, 0, 0, size.w, size.h, 0, 0);
-		//iconQueue = [];
+		foreach(q; iconQueue)
+			q();
+		iconQueue = [];
 		XSync(dpy, False);
 	}
 

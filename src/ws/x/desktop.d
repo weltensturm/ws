@@ -20,14 +20,16 @@ const string[] desktopPaths = [
 
 class DesktopEntry {
 
+	string path;
 	string exec;
 	string type;
 	string name;
 	string comment;
 	string terminal;
 	string[] categories;
+	bool noDisplay;
 
-	this(string text){
+	this(string path, string text){
 		bool validSection;
 		foreach(line; text.splitLines){
 			if(line.startsWith("["))
@@ -38,6 +40,8 @@ class DesktopEntry {
 				name = line.chompPrefix("Name=");
 			else if(validSection && line.startsWith("Categories="))
 				categories = line.chompPrefix("Categories=").split(";").filter!"a.length".array;
+			else if(validSection && line.startsWith("NoDisplay="))
+				noDisplay = line.canFind("true");
 		}
 	}
 
@@ -48,7 +52,7 @@ DesktopEntry[] readDesktop(string path){
 	if(!path.isFile)
 		return result;
 	foreach(section; matchAll(path.readText, `\[[^\]\r\n]+\](?:\r?\n(?:[^\[\r\n].*)?)*`)){
-		result ~= new DesktopEntry(section.hit);
+		result ~= new DesktopEntry(path, section.hit);
 	}
 	return result;
 }
