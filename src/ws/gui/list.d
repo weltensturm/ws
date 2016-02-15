@@ -1,9 +1,9 @@
 module ws.gui.list;
 
 import
-	std.datetime,
 	std.math,
 	std.algorithm,
+	ws.time,
 	ws.gl.draw,
 	ws.gui.base,
 	ws.gui.button;
@@ -15,8 +15,8 @@ class List: Base {
 	int entryHeight = 30;
 	double scroll = 0;
 	double scrollSpeed = 0;
-	long frameTime;
-	long frameLast;
+	double frameTime;
+	double frameLast;
 	
 	override void resize(int[2] size){
 		super.resize(size);
@@ -53,11 +53,11 @@ class List: Base {
 	override void onDraw(){
 		if(hidden)
 			return;
-		frameTime = Clock.currSystemTick.msecs-frameLast;
-		frameLast = Clock.currSystemTick.msecs;
+		frameTime = now-frameLast;
+		frameLast = now;
 		if(scrollSpeed){
-			scroll = (scroll + scrollSpeed*frameTime/60.0).min(children.length).max(0);
-			scrollSpeed = scrollSpeed.eerp(0, frameTime/1000.0, frameTime/350.0, frameTime/350.0);
+			scroll = (scroll + scrollSpeed*frameTime*0.06).min(children.length).max(0);
+			scrollSpeed = scrollSpeed.eerp(0, frameTime, frameTime*0.350, frameTime*0.350);
 			update;
 		}
 		draw.setColor(style.bg.normal);

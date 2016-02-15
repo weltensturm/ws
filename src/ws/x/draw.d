@@ -49,6 +49,9 @@ class Cur {
 class Icon {
 	Picture picture;
 	int[2] size;
+	void destroy(Display* dpy){
+		XRenderFreePicture(dpy, picture);
+	}
 }
 
 class XDraw: DrawEmpty {
@@ -227,7 +230,7 @@ class XDraw: DrawEmpty {
 
 		auto pixmap = XCreatePixmap(dpy, drawable, size.w, size.h, 32);
 		assert(pixmap);
-     	XRenderPictFormat *pictformat = XRenderFindStandardFormat(dpy, PictStandardARGB32);
+     	auto pictformat = XRenderFindStandardFormat(dpy, PictStandardARGB32);
      	XRenderPictureAttributes attributes;
      	res.picture = XRenderCreatePicture(dpy, pixmap, pictformat, 0, &attributes);
 		XRenderSetPictureFilter(dpy, res.picture, "best", null, 0);

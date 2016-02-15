@@ -2,9 +2,9 @@
 module ws.file.tga;
 
 import
+	core.stdc.string,
 	std.file,
 	std.string,
-	std.c.string,
 	std.zlib,
 	ws.string,
 	ws.exception;

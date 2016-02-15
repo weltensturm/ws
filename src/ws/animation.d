@@ -2,16 +2,16 @@ module ws.animation;
 
 
 import
-	std.datetime,
 	std.math,
-	std.algorithm;
+	std.algorithm,
+	ws.time;
 
 
 class Animation {
 
 	static double time;
 	static void update(){
-		time = Clock.currSystemTick.msecs/1000.0;
+		time = now;
 	}
 
 	double start;

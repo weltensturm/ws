@@ -1,10 +1,10 @@
 module ws.gui.scroller;
 
 import
-	std.datetime,
 	std.math,
 	std.algorithm,
 	std.conv,
+	ws.time,
 	ws.gui.base;
 
 
@@ -12,8 +12,8 @@ class Scroller: Base {
 	
 	double scroll = 0;
 	double scrollSpeed = 0;
-	long frameTime;
-	long frameLast;
+	double frameTime;
+	double frameLast;
 	
 	override void resize(int[2] size){
 		super.resize(size);
@@ -56,11 +56,11 @@ class Scroller: Base {
 	override void onDraw(){
 		if(hidden)
 			return;
-		frameTime = Clock.currSystemTick.msecs-frameLast;
-		frameLast = Clock.currSystemTick.msecs;
+		frameTime = now-frameLast;
+		frameLast = now;
 		if(scrollSpeed){
-			scroll = (scroll + scrollSpeed*frameTime/60.0).min(children[0].size.h - size.h).max(0);
-			scrollSpeed = scrollSpeed.eerp(0, 0, frameTime/100.0, frameTime/25.0);
+			scroll = (scroll + scrollSpeed*frameTime*30).min(children[0].size.h - size.h).max(0);
+			scrollSpeed = scrollSpeed.eerp(0, 0, frameTime*20, frameTime);
 			update;
 		}
 		draw.clip(pos, size);

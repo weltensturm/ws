@@ -7,7 +7,7 @@ import
 	ws.sys.library,
 	ws.time,
 	std.socket,
-	std.c.windows.winsock;
+	core.sys.windows.winsock2;
 
 //pragma(lib, "miniupnpc");
 
@@ -69,13 +69,13 @@ class upnp {
 		double timeout;
 
 		@property bool valid(){
-			return timeout > time.now();
+			return timeout > now;
 		}
 		
 		this(long portIntern, long portExtern, long p){
 			if(p & tcp) addPortMapping("TCP", portIntern, portExtern);
 			if(p & udp) addPortMapping("UDP", portIntern, portExtern);
-			timeout = time.now() + 7200;
+			timeout = now+7200;
 		}
 		
 		void disable(){

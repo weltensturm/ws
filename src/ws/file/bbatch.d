@@ -5,7 +5,6 @@ import
 	std.stdio,
 	std.file,
 	std.path,
-	std.c.string,
 	ws.decode,
 	ws.file.obj;
 

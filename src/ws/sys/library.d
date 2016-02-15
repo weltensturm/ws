@@ -8,7 +8,7 @@ import
 	ws.log;
 
 version(Windows) import derelict.util.wintypes;
-version(Posix) import std.c.linux.linux;
+version(Posix) import core.sys.posix.dlfcn;
 
 
 string embedFunc(string n, string t)(){

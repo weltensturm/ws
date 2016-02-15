@@ -59,7 +59,7 @@ class InputField: Base {
 					onEnter(text);
 				catch(InputException e){
 					error = e.msg;
-					errorTime = time.now;
+					errorTime = now;
 				}
 				break;
 				
@@ -97,12 +97,12 @@ class InputField: Base {
 		draw.rectOutline(pos, size);
 		auto color = style.fg.normal;
 		if(hasFocus || hasMouseFocus){
-			auto alpha = (sin(time.now*PI*2)+0.5).min(1).max(0)*0.9+0.1;
+			auto alpha = (sin(now*PI*2)+0.5).min(1).max(0)*0.9+0.1;
 			draw.setColor([1*alpha,1*alpha,1*alpha]);
 			int x = draw.width(text[0..cursor]);
 			draw.rect(pos.a + [x+4, 4], [1, size.h-8]);
 		}
-		auto t = time.now;
+		auto t = now;
 		if(errorTime+2 > t){
 			auto alpha = clamp!float(errorTime+2 - t, 0, 1)/1;
 			draw.setColor([1,0,0,alpha]);

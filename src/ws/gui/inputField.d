@@ -60,7 +60,7 @@ class InputField: Text {
 					onEnter(text.toString());
 				catch(InputException e){
 					error = e.msg;
-					errorTime = time.now;
+					errorTime = now;
 				}
 				break;
 				
@@ -97,7 +97,7 @@ class InputField: Text {
 		super.onDraw();
 		auto color = style.fg.normal;
 		if(hasFocus){
-			Draw.setColor(color[0], color[1], color[2], color[3]*clamp!float(sin(time.now*PI*2) + 0.5, 0, 1));
+			Draw.setColor(color[0], color[1], color[2], color[3]*clamp!float(sin(now*PI*2) + 0.5, 0, 1));
 			if(!text.cursor.prev)
 				Draw.line(pos[0] + 4, pos[1] + 3, pos[0] + 4, pos[1] + size[1]-2);
 			else {
@@ -107,7 +107,7 @@ class InputField: Text {
 				draw.line(lpos, lpos.a + [0, size[1]-4]);
 			}
 		}
-		auto t = time.now;
+		auto t = now;
 		if(errorTime+2 > t){
 			auto alpha = clamp!float(errorTime+2 - t, 0, 1)/1;
 			Draw.setColor(1,0,0,alpha);
