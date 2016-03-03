@@ -23,7 +23,7 @@ class Inotify {
     timeval timeOut;
     fd_set descriptorSet;
 
-    enum Action {
+    enum {
         Add,
         Remove,
         Modify

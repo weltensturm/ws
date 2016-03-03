@@ -69,7 +69,7 @@ class Base {
 		foreach(child; children){
 			if(child.hidden || filter.canFind(child))
 				continue;
-			if(child.pos.x < x && child.pos.x+child.size.x > x && child.pos.y < y && child.pos.y+child.size.y > y){
+			if(child.pos.x <= x && child.pos.x+child.size.x >= x && child.pos.y <= y && child.pos.y+child.size.y >= y){
 				return child;
 			}
 		}
@@ -240,7 +240,8 @@ class Base {
 				if(mouseChild)
 					mouseChild.onMouseFocus(false);
 				child.onMouseFocus(true);
-				wm.active.setCursor(child.cursor);
+				if(wm.active)
+					wm.active.setCursor(child.cursor);
 				mouseChild = child;
 				foundFocus = true;
 			}
@@ -250,7 +251,8 @@ class Base {
 			if(!foundFocus){
 				mouseChild.onMouseFocus(false);
 				mouseChild = null;
-				wm.active.setCursor(cursor);
+				if(wm.active)
+					wm.active.setCursor(cursor);
 			}else{
 				mouseChild.onMouseMove(x, y);
 			}

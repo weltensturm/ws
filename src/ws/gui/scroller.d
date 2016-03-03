@@ -38,6 +38,8 @@ class Scroller: Base {
 	}
 
 	override void onMouseButton(Mouse.button button, bool pressed, int x, int y){
+		if(!children.length)
+			return;
 		auto maxOffset = (children[0].size.h - size.h).max(0);
 		if(button == Mouse.wheelDown && scroll < maxOffset){
 			if(pressed){
@@ -60,7 +62,7 @@ class Scroller: Base {
 		frameLast = now;
 		if(scrollSpeed){
 			scroll = (scroll + scrollSpeed*frameTime*30).min(children[0].size.h - size.h).max(0);
-			scrollSpeed = scrollSpeed.eerp(0, 0, frameTime*20, frameTime);
+			scrollSpeed = scrollSpeed.eerp(0, frameTime*15, frameTime*7.5, frameTime/50);
 			update;
 		}
 		draw.clip(pos, size);
@@ -74,6 +76,6 @@ class Scroller: Base {
 double eerp(double current, double target, double a, double b, double c){
 	auto dir = current < target ? 1 : -1;
 	auto diff = (current-target).abs;
-	return current + (dir*(a*diff^^2 + b*diff + c)).min(diff).max(-diff);
+	return current + (dir*(c*diff^^2 + b*diff + a)).min(diff).max(-diff);
 }
 

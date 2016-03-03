@@ -78,6 +78,7 @@ class Tree: Base {
 	override Base add(Base elem){
 		super.add(elem);
 		update;
+		resize(size);
 		return elem;
 	}
 

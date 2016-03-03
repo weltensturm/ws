@@ -215,9 +215,10 @@ class XDraw: DrawEmpty {
 	Icon icon(ubyte[] data, int[2] size){
 		assert(data.length == size.w*size.h*4, "%s != %s*%s*4".format(data.length, size.w, size.h));
 		auto res = new Icon;
+
 		auto img = XCreateImage(
 				dpy,
-				cast(Visual*)CopyFromParent,
+				null,
 				32,
 				ZPixmap,
 				0,
@@ -229,13 +230,13 @@ class XDraw: DrawEmpty {
 		);
 
 		auto pixmap = XCreatePixmap(dpy, drawable, size.w, size.h, 32);
-		assert(pixmap);
-     	auto pictformat = XRenderFindStandardFormat(dpy, PictStandardARGB32);
+
      	XRenderPictureAttributes attributes;
-     	res.picture = XRenderCreatePicture(dpy, pixmap, pictformat, 0, &attributes);
-		XRenderSetPictureFilter(dpy, res.picture, "best", null, 0);
 		auto gc = XCreateGC(dpy, pixmap, 0, null);
 	    XPutImage(dpy, pixmap, gc, img, 0, 0, 0, 0, size.w, size.h);
+     	auto pictformat = XRenderFindStandardFormat(dpy, PictStandardARGB32);
+     	res.picture = XRenderCreatePicture(dpy, pixmap, pictformat, 0, &attributes);
+		XRenderSetPictureFilter(dpy, res.picture, "best", null, 0);
 		XFreePixmap(dpy, pixmap);
 
 		res.size = size;
