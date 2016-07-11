@@ -18,52 +18,75 @@ __gshared:
 
 class X11Window: Base {
 
-	package {
-		Mouse.cursor cursor = Mouse.cursor.inherit;
-		string title;
-		bool isActive = false;
-		WindowHandle windowHandle;
-		GraphicsContext graphicsContext;
-		List!Event eventQueue;
+	Mouse.cursor cursor = Mouse.cursor.inherit;
+	string title;
+	bool isActive = false;
+	WindowHandle windowHandle;
+	GraphicsContext graphicsContext;
+	List!Event eventQueue;
 
-		XIC inputContext;
-		int oldX, oldY;
-		int jumpTargetX, jumpTargetY;
+	XIC inputContext;
+	int oldX, oldY;
+	int jumpTargetX, jumpTargetY;
 
-		bool mouseFocus;
-	}
+	bool mouseFocus;
 
 	this(WindowHandle handle){
 		assert(handle);
 		windowHandle = handle;
 	}
 
+	XSetWindowAttributes windowAttributes;
+
+	bool onlyNotify;
+
+	Atom wmDelete;
+
 	this(int w, int h, string t, bool override_redirect=false){
 		title = t;
 		size = [w, h];
 		eventQueue = new List!Event;
 		
-		XSetWindowAttributes wa;
-		wa.override_redirect = override_redirect;
-		wa.background_pixmap = ParentRelative;
-		wa.event_mask = wm.eventMask;
-		wa.border_pixel = 0;
-		wa.bit_gravity = StaticGravity;
-		wa.colormap = XCreateColormap(
-				wm.displayHandle, XRootWindow(wm.displayHandle, wm.graphicsInfo.screen),
-				wm.graphicsInfo.visual, AllocNone
-		);
+		auto eventMask =
+				ExposureMask |
+				StructureNotifyMask |
+				KeyPressMask |
+				KeyReleaseMask |
+				KeymapStateMask |
+				PointerMotionMask |
+				ButtonPressMask |
+				ButtonReleaseMask |
+				EnterWindowMask |
+				LeaveWindowMask;
+		
+		auto windowMask =
+				CWBorderPixel |
+				CWBitGravity |
+				CWEventMask |
+				CWColormap |
+				CWBackPixmap |
+				(override_redirect ? CWOverrideRedirect : 0);
+
+		auto root = XDefaultRootWindow(wm.displayHandle); 
+
+		windowAttributes.override_redirect = override_redirect;
+		windowAttributes.background_pixmap = None;
+		windowAttributes.event_mask = eventMask;
+		windowAttributes.border_pixel = 0;
+		windowAttributes.bit_gravity = StaticGravity;
+		windowAttributes.colormap = XCreateColormap(wm.displayHandle, root, wm.graphicsInfo.visual, AllocNone);
 		
 		windowHandle = XCreateWindow(
 			wm.displayHandle,
-			XDefaultRootWindow(wm.displayHandle),
+			root,
 			0, 0, cast(size_t)size.x, cast(size_t)size.y, 0,
 			wm.graphicsInfo.depth,
 			InputOutput,
 			wm.graphicsInfo.visual,
-			wm.windowMask | (override_redirect ? CWOverrideRedirect : 0),
-			&wa
+			windowMask,
+			&windowAttributes
 		);
+		
 		inputContext = XCreateIC(
 			XOpenIM(wm.displayHandle, null, null, null),
 			XNClientWindow, windowHandle,
@@ -71,8 +94,8 @@ class X11Window: Base {
 			XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
 			null
 		);
-		XSelectInput(wm.displayHandle, windowHandle, wm.eventMask);
-		Atom wmDelete = XInternAtom(wm.displayHandle, "WM_DELETE_WINDOW".toStringz, True);
+		XSelectInput(wm.displayHandle, windowHandle, eventMask);
+		wmDelete = XInternAtom(wm.displayHandle, "WM_DELETE_WINDOW".toStringz, True);
 		XSetWMProtocols(wm.displayHandle, windowHandle, &wmDelete, 1);
 		gcInit;
 		drawInit;
@@ -87,24 +110,26 @@ class X11Window: Base {
 			return;
 		XMapWindow(wm.displayHandle, windowHandle);
 		gcActivate;
-		isActive = true;
+		onShow;
 		onKeyboardFocus(true);
 	}
 	
 	override void onShow(){
 		isActive = true;
+		hidden = false;
 	}
 	
 	override void hide(){
 		if(!isActive)
 			return;
 		XUnmapWindow(wm.displayHandle, windowHandle);
-		isActive = false;
+		onHide;
 		//wm.windows.remove(this);
 	}
 	
 	override void onHide(){
 		isActive = false;
+		hidden = true;
 	}
 
 	void swapBuffers(){
@@ -113,6 +138,10 @@ class X11Window: Base {
 
 	override void onDraw(){
 		super.onDraw;
+	}
+
+	void onDestroy(){
+		draw.destroy;
 	}
 
 	@property
@@ -235,14 +264,18 @@ class X11Window: Base {
 	}
 
 	
-	void processEvent(Event e){
+	void processEvent(Event* e){
 		switch(e.type){
 			case ConfigureNotify:
 				if(size.x != e.xconfigure.width || size.y != e.xconfigure.height){
+					onlyNotify = true;
 					resize([e.xconfigure.width, e.xconfigure.height]);
+					onlyNotify = false;
 				}
 				if(pos.x != e.xconfigure.x || pos.y != e.xconfigure.y){
+					onlyNotify = true;
 					move([e.xconfigure.x, e.xconfigure.y]);
+					onlyNotify = false;
 				}
 				break;
 			case KeyPress:
@@ -278,8 +311,13 @@ class X11Window: Base {
 			case LeaveNotify: onMouseFocus(false); mouseFocus=false; break;
 			case MapNotify: onShow; break;
 			case UnmapNotify: onHide; break;
+			case DestroyNotify: onDestroy; break;
 			case Expose: onDraw(); break;
-			case ClientMessage: hide(); break;
+			case ClientMessage:
+				if(e.xclient.message_type == wmDelete){
+					hide();
+				}
+				break;
 			case KeymapNotify: XRefreshKeyboardMapping(&e.xmapping); break;
 			default:break;
 		}
@@ -291,12 +329,16 @@ class X11Window: Base {
 	}
 
 	override void resize(int[2] size){
+		if(!onlyNotify)
+			XResizeWindow(wm.displayHandle, windowHandle, size.w, size.h);
 		super.resize(size);
 		if(draw)
 			draw.resize(size);
 	}
 
 	override void move(int[2] pos){
+		if(!onlyNotify)
+			XMoveWindow(wm.displayHandle, windowHandle, pos.x, pos.y);
 		this.pos = pos;
 	}
 

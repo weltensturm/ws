@@ -17,7 +17,7 @@ class InputField: Base {
 	Event!string onEnter;
 
 	string text;
-	long cursor;
+	size_t cursor;
 
 	string error;
 	double errorTime;

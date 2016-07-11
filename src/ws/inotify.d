@@ -6,6 +6,7 @@ import
     core.sys.posix.sys.time,
     core.sys.posix.unistd,
     core.sys.posix.sys.select,
+    core.stdc.errno,
     std.string,
     std.stdio,
     std.algorithm,
@@ -13,15 +14,20 @@ import
     ws.event;
 
 
+version(Posix):
+
+__gshared:
+
+
 class Inotify {
 
     enum EVENT_BUFFER_LENGTH = (inotify_event.sizeof + 16) * 1024;
 
-    WatchStruct*[int] watchers;
-    int mLastWatchID;
-    int inotify;
-    timeval timeOut;
-    fd_set descriptorSet;
+    static int inotify = -1;
+    static timeval timeOut;
+    static fd_set descriptorSet;
+
+    static Watcher[int] staticWatchers;
 
     enum {
         Add,
@@ -29,61 +35,49 @@ class Inotify {
         Modify
     }
 
-    struct WatchStruct {
-        int id;
-        string directory;
-        Event!(string, string) add;
-        Event!(string, string) remove;
-        Event!(string, string) change;
-    };
 
-
-    this(){
-        inotify = inotify_init();
+    shared static this(){
+        if(inotify >= 0)
+            return;
+        inotify = inotify_init;
         if(inotify < 0)
-            writeln("Error");
-        timeOut.tv_sec = 0;
-        timeOut.tv_usec = 0;
-        FD_ZERO(&descriptorSet);
+                throw new Exception("Failed to initialize inotify: %s".format(errno));
+            timeOut.tv_sec = 1;
+            timeOut.tv_usec = 0;
+            FD_ZERO(&descriptorSet);
     }
 
 
-    void destroy(){
-    }
-
-
-    WatchStruct* addWatch(string directory, bool recursive){
-        int wd = inotify_add_watch(inotify, directory.toStringz, IN_CLOSE_WRITE | IN_MOVED_TO | IN_CREATE | IN_MOVED_FROM | IN_DELETE);
-        if(wd < 0){
-            throw new Exception("inotify error in ", directory);
+    static class Watcher {
+        this(){
+            event = new Event!(string, string, int);
         }
-        auto watcher = new WatchStruct;
-        watcher.id = wd;
+        string directory;
+        Event!(string, string, int) event;
+    }
+
+
+    static void watch(string directory, void delegate(string, string, int) event){
+        assert(inotify >= 0);
+        foreach(wd, watcher; staticWatchers){
+            if(watcher.directory == directory){
+                watcher.event ~= event;
+                return;
+            }
+        }
+        if(staticWatchers.values.find!(a => a.directory == directory).length){
+            return;
+        }
+        int wd = inotify_add_watch(inotify, directory.toStringz, IN_CLOSE_WRITE | IN_MOVED_TO | IN_CREATE | IN_MOVED_FROM | IN_DELETE);
+        if(wd < 0)
+            throw new Exception("inotify error in %s: %s".format(directory, errno));
+        auto watcher = new Watcher;
         watcher.directory = directory;
-        watcher.add = new Event!(string, string);
-        watcher.remove = new Event!(string, string);
-        watcher.change = new Event!(string, string);
-        watchers[wd] = watcher;
-        return watcher;
+        watcher.event ~= event;
+        staticWatchers[wd] = watcher;
     }
 
-
-    void removeWatch(string directory){
-        foreach(id, watch; watchers)
-            if(watch.directory == directory)
-                removeWatch(watch);
-    }
-
-
-    void removeWatch(WatchStruct* watcher){
-        foreach(id, watch; watchers)
-            if(watch == watcher)
-                watchers.remove(id);
-        inotify_rm_watch(inotify, watcher.id);
-    }
-
-
-    void update(){
+    static void update(){
         FD_SET(inotify, &descriptorSet);
         int ret = select(inotify + 1, &descriptorSet, null, null, &timeOut);
         if(ret < 0){
@@ -94,23 +88,19 @@ class Inotify {
             len = read(inotify, buff.ptr, buff.length);
             while(i < len){
                 auto pevent = cast(inotify_event*)&buff[i];
-                WatchStruct* watch = watchers[pevent.wd];
-                handleAction(watch, (cast(char*)&pevent.name).to!string, pevent.mask);
+                auto watcher = staticWatchers[pevent.wd];
+                watcher.event(
+                    watcher.directory,
+                    (cast(char*)&pevent.name).to!string,
+                    pevent.mask & IN_CLOSE_WRITE ? Modify
+                        : pevent.mask & (IN_MOVED_TO | IN_CREATE) ? Add
+                        : pevent.mask & (IN_MOVED_FROM | IN_DELETE) ? Remove
+                        : -1);
                 i += inotify_event.sizeof + pevent.len;
             }
         }
+
     }
-
-
-    void handleAction(WatchStruct* watch, string filename, ulong action){
-        if(IN_CLOSE_WRITE & action)
-            watch.change(watch.directory, filename);
-        if(IN_MOVED_TO & action || IN_CREATE & action)
-            watch.add(watch.directory, filename);
-        if(IN_MOVED_FROM & action || IN_DELETE & action)
-            watch.remove(watch.directory, filename);
-    }
-
 
 }
 

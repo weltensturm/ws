@@ -82,6 +82,20 @@ class Tree: Base {
 		return elem;
 	}
 
+	Base add(Base elem, bool delegate(Base) here){
+		foreach(i, c; children ~ null){
+			if(here(c)){
+				elem.parent = this;
+				elem.hidden = false;
+				children = children[0..i] ~ elem ~ children[i..$];
+				break;
+			}
+		}
+		update;
+		resize(size);
+		return elem;
+	}
+
 	override void resize(int[2] size){
 		int y = padding;
 		expander.move(pos.a+[0,size.h-expander.size.h]);

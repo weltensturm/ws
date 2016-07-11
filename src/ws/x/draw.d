@@ -13,6 +13,7 @@ import
 	x11.extensions.render,
 	x11.extensions.Xrender,
 	ws.draw,
+	ws.wm,
 	ws.bindings.xft,
 	ws.gui.point,
 	ws.x.font;
@@ -59,7 +60,8 @@ class XDraw: DrawEmpty {
 	int[2] size;
 	Display* dpy;
 	int screen;
-	Window root;
+	x11.X.Window window;
+	Visual* visual;
 	Drawable drawable;
 	XftDraw* xft;
 	GC gc;
@@ -74,23 +76,33 @@ class XDraw: DrawEmpty {
 
 	Picture frontBuffer;
 
-	this(Display* dpy, int screen, Window root, int w, int h){
+	this(ws.wm.Window window){
+		this(wm.displayHandle, window.windowHandle);
+	}
+
+	this(Display* dpy, x11.X.Window window){
+		XWindowAttributes wa;
+		XGetWindowAttributes(dpy, window, &wa);
 		this.dpy = dpy;
-		this.screen = screen;
-		this.root = root;
-		size = [w,h];
-		drawable = XCreatePixmap(dpy, root, w, h, DefaultDepth(dpy, screen));
-		gc = XCreateGC(dpy, root, 0, null);
+		screen = DefaultScreen(dpy);
+		this.window = window;
+		this.size = [wa.width, wa.height];
+		drawable = XCreatePixmap(dpy, window, size.w, size.h, wa.depth);
+		gc = XCreateGC(dpy, window, 0, null);
 		XSetLineAttributes(dpy, gc, 1, LineSolid, CapButt, JoinMiter);
-		auto cmap = DefaultColormap(dpy, screen);
-		auto vis = DefaultVisual(dpy, screen);
-		xft = XftDrawCreate(dpy, drawable, vis, cmap);
-		
-		auto format = XRenderFindVisualFormat(dpy, vis);
+		xft = XftDrawCreate(dpy, drawable, wa.visual, wa.colormap);
+		visual = wa.visual;
+		auto format = XRenderFindVisualFormat(dpy, wa.visual);
 		XRenderPictureAttributes pa;
 		pa.subwindow_mode = IncludeInferiors;
-		frontBuffer = XRenderCreatePicture(dpy, root, format, CPSubwindowMode, &pa);
+		frontBuffer = XRenderCreatePicture(dpy, drawable, format, CPSubwindowMode, &pa);
+	}
 
+	~this(){
+		if(drawable)
+			XFreePixmap(dpy, drawable);
+		if(frontBuffer)
+			XRenderFreePicture(dpy, frontBuffer);
 	}
 
 	override int width(string text){
@@ -98,17 +110,28 @@ class XDraw: DrawEmpty {
 	}
 
 	override void resize(int[2] size){
+		if(this.size == size)
+			return;
 		this.size = size;
 		if(drawable)
 			XFreePixmap(dpy, drawable);
-		drawable = XCreatePixmap(dpy, root, size.w, size.h, DefaultDepth(dpy, screen));
+		drawable = XCreatePixmap(dpy, window, size.w, size.h, DefaultDepth(dpy, screen));
+		auto format = XRenderFindVisualFormat(dpy, visual);
+		XRenderPictureAttributes pa;
+		pa.subwindow_mode = IncludeInferiors;
+		if(frontBuffer)
+			XRenderFreePicture(dpy, frontBuffer);
+		frontBuffer = XRenderCreatePicture(dpy, drawable, format, CPSubwindowMode, &pa);
 		XftDrawChange(xft, drawable);
 	}
 
-	void destroy(){
+	override void destroy(){
 		foreach(font; fonts)
 			font.destroy;
 		XFreePixmap(dpy, drawable);
+		XRenderFreePicture(dpy, frontBuffer);
+		drawable = None;
+		frontBuffer = None;
 		XftDrawDestroy(xft);
 		XFreeGC(dpy, gc);
 	}
@@ -174,21 +197,24 @@ class XDraw: DrawEmpty {
 	}
 
 	override void rect(int[2] pos, int[2] size){
-		XSetForeground(dpy, gc, color.pix);
-		XFillRectangle(dpy, drawable, gc, pos.x, this.size.h-size.h-pos.y, size.w, size.h);
-		/+
-		XRenderColor color;
-		color.red =   this.color.rgba[0].to!ushort;
-		color.green = this.color.rgba[1].to!ushort;
-		color.blue =  this.color.rgba[2].to!ushort;
-		color.alpha = this.color.rgba[3].to!ushort;
-		XRenderFillRectangle(dpy, PictOpSrc, picture, &color, pos.x, this.size.h-size.h-pos.y, size.w, size.h);
-		+/
+		auto a = this.color.rgba[3]/255.0;
+		XRenderColor color = {
+			(this.color.rgba[0]*255*a).to!ushort,
+			(this.color.rgba[1]*255*a).to!ushort,
+			(this.color.rgba[2]*255*a).to!ushort,
+			(this.color.rgba[3]*255).to!ushort
+		};
+		XRenderFillRectangle(dpy, PictOpOver, frontBuffer, &color, pos.x, this.size.h-size.h-pos.y, size.w, size.h);
 	}
 
 	override void rectOutline(int[2] pos, int[2] size){
 		XSetForeground(dpy, gc, color.pix);
 		XDrawRectangle(dpy, drawable, gc, pos.x, this.size.h-pos.y-size.h, size.w, size.h);
+	}
+
+	override void line(int[2] start, int[2] end){
+		XSetForeground(dpy, gc, color.pix);
+		XDrawLine(dpy, drawable, gc, start.x, start.y, end.x, end.y);
 	}
 
 	override int text(int[2] pos, string text, double offset=-0.2){
@@ -209,8 +235,6 @@ class XDraw: DrawEmpty {
 		pos.y += ((h-font.h)/2.0).lround;
 		return this.text(pos, text, offset);
 	}
-
-	void delegate()[] iconQueue;
 
 	Icon icon(ubyte[] data, int[2] size){
 		assert(data.length == size.w*size.h*4, "%s != %s*%s*4".format(data.length, size.w, size.h));
@@ -242,31 +266,25 @@ class XDraw: DrawEmpty {
 		res.size = size;
 		return res;
 		/+
-		res.pixmap = XCreatePixmap(wm.displayHandle, root, DisplayWidth(wm.displayHandle, 0), DisplayHeight(wm.displayHandle, 0), DefaultDepth(wm.displayHandle, 0));
+		res.pixmap = XCreatePixmap(wm.displayHandle, window, DisplayWidth(wm.displayHandle, 0), DisplayHeight(wm.displayHandle, 0), DefaultDepth(wm.displayHandle, 0));
 		res.picture = XRenderCreatePicture(wm.displayHandle, pixmap, format, 0, null);
 		XFreePixmap(wm.displayHandle, res.pixmap);
 		+/
 		
 	}
 
-	void icon(Icon icon, int x, int y, double scale){
-		iconQueue ~= {
-			XTransform xform = {[
-				[XDoubleToFixed( 1 ), XDoubleToFixed( 0 ), XDoubleToFixed( 0 )],
-				[XDoubleToFixed( 0 ), XDoubleToFixed( 1 ), XDoubleToFixed( 0 )],
-				[XDoubleToFixed( 0 ), XDoubleToFixed( 0 ), XDoubleToFixed( scale )]
-			]};
-			XRenderSetPictureTransform(dpy, icon.picture, &xform);
-			XRenderComposite(dpy, PictOpOver, icon.picture, None, frontBuffer, 0, 0, 0, 0, x, y, (icon.size.w*scale).to!int, (icon.size.h*scale).to!int);
-		};
-		//XPutImage(dpy, drawable, gc, icon.img, 0, 0, x, y, cast(uint)icon.width, cast(uint)icon.height);
+	void icon(Icon icon, int x, int y, double scale, Picture alpha=None){
+		XTransform xform = {[
+			[XDoubleToFixed( 1 ), XDoubleToFixed( 0 ), XDoubleToFixed( 0 )],
+			[XDoubleToFixed( 0 ), XDoubleToFixed( 1 ), XDoubleToFixed( 0 )],
+			[XDoubleToFixed( 0 ), XDoubleToFixed( 0 ), XDoubleToFixed( scale )]
+		]};
+		XRenderSetPictureTransform(dpy, icon.picture, &xform);
+		XRenderComposite(dpy, PictOpOver, icon.picture, alpha, frontBuffer, 0, 0, 0, 0, x, y, (icon.size.w*scale).to!int, (icon.size.h*scale).to!int);
 	}
 
 	override void finishFrame(){
-		XCopyArea(dpy, drawable, root, gc, 0, 0, size.w, size.h, 0, 0);
-		foreach(q; iconQueue)
-			q();
-		iconQueue = [];
+		XCopyArea(dpy, drawable, window, gc, 0, 0, size.w, size.h, 0, 0);
 		XSync(dpy, False);
 	}
 

@@ -31,6 +31,7 @@ class DesktopEntry {
 
 	this(string path, string text){
 		bool validSection;
+		this.path = path;
 		foreach(line; text.splitLines){
 			if(line.startsWith("["))
 				validSection = line == "[Desktop Entry]";

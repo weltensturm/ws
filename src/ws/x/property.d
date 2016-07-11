@@ -1,19 +1,58 @@
 module ws.x.property;
 
 import
+	std.algorithm,
+	std.array,
 	std.string,
 	std.conv,
 	x11.X,
 	x11.Xlib,
 	x11.Xutil,
 	x11.Xatom,
+	ws.gui.base,
 	ws.wm;
 
-class Property(ulong Format, bool List){
 
-	Atom property;
+class BaseProperty {
+
 	x11.X.Window window;
-	
+	Atom property;
+	string name;
+
+	abstract void update();
+
+}
+
+
+class PropertyList {
+
+	private BaseProperty[] properties;
+
+	void add(BaseProperty property){
+		properties ~= property;
+	}
+
+	void remove(BaseProperty property){
+		properties = properties.without(property);
+	}
+
+	void remove(x11.X.Window window){
+		properties = properties.filter!(a => a.window != window).array;
+	}
+
+	void update(XPropertyEvent* event){
+		foreach(property; properties){
+			if(property.property == event.atom && property.window == event.window){
+				property.update;
+			}
+		}
+	}
+
+}
+
+
+class Property(ulong Format, bool List): BaseProperty {
+
 	static if(Format == XA_CARDINAL || Format == XA_PIXMAP)
 		alias Type = long;
 	static if(Format == XA_ATOM)
@@ -23,11 +62,43 @@ class Property(ulong Format, bool List){
 	static if(Format == XA_STRING)
 		alias Type = string;
 
-	this(x11.X.Window window, string name){
-		this.window = window;
-		property = XInternAtom(wm.displayHandle, name.toStringz, false);
+	static if(List)
+		alias FullType = Type[];
+	else
+		alias FullType = Type;
+	
+	FullType value;
+
+	void delegate(FullType)[] handlers;
+
+	void opAssign(FullType value){
+		this.value = value;
+		set(value);
 	}
 
+	void opOpAssign(string op)(void delegate(FullType) handler){
+		static if(op == "~")
+			handlers ~= handler;
+		else static assert(false, op ~ "= not supported");
+	}
+
+	alias value this;
+
+
+	this(x11.X.Window window, string name, PropertyList list = null){
+		if(list)
+			list.add(this);
+		this.window = window;
+		this.name = name;
+		property = XInternAtom(wm.displayHandle, name.toStringz, false);
+		update;
+	}
+
+	override void update(){
+		value = get;
+		foreach(handler; handlers)
+			handler(value);
+	}
 
 	ubyte* raw(ref ulong count){
 		int di;
@@ -40,6 +111,10 @@ class Property(ulong Format, bool List){
 		return null;
 	}
 
+	void rawset(T1, T2)(Atom format, int size, int mode, T1* data, T2 length){
+		XChangeProperty(wm.displayHandle, window, property, format, size, mode, cast(ubyte*)data, cast(int)length);
+	}
+
 	void request(Type[] data){
 		XEvent e;
 		e.type = ClientMessage;
@@ -50,204 +125,32 @@ class Property(ulong Format, bool List){
 		XSendEvent(wm.displayHandle, XDefaultRootWindow(wm.displayHandle), false, SubstructureNotifyMask|SubstructureRedirectMask, &e);
 	}
 	
-	static if(List)
-		Type[] get(){
-			ulong count;
-			auto p = raw(count);
-			auto d = (cast(Type*)p)[0..count].dup;
-			XFree(p);
-			return d;
-		}
-	else{
-		static if(is(Type == string)){
-			Type get(){
-				ulong n=1;
-				auto p = raw(n);
-				if(!p)
-					return Type.init;
-				auto d = (cast(char*)p)[0..n].to!string;
-				XFree(p);
-				return d;
-			}
-			void set(Type data){
-				XChangeProperty(wm.displayHandle, window, property, XInternAtom(wm.displayHandle, "UTF8_STRING", False), 8, PropModeReplace, cast(ubyte*)data.toStringz, cast(int)data.length);
-			}
-		}else{
-			Type get(){
-				ulong n=1;
-				auto p = raw(n);
-				if(!p)
-					return Type.init;
-				auto d = *(cast(Type*)p);
-				XFree(p);
-				return d;
-			}
-			void set(Type data){
-				XChangeProperty(wm.displayHandle, window, property, Format, 32, PropModeReplace, cast(ubyte*)&data, 1);
-			}
-		}
-
-	}
-
-
-}
-
-
-/+
-
-module dock.proputil;
-
-import dock;
-
-
-alias CARDINAL = long;
-
-Display* dpy;
-
-
-class Property {
-	
-	x11.X.Window window;
-	Atom property;
-	int format;
-	
-	this(x11.X.Window window, string name){
-		this.window = window;
-		if(!dpy)
-			dpy = XOpenDisplay(null);
-		property = XInternAtom(dpy, name.toStringz, false);
-	}
-	
-	ubyte* _rawget(ref ulong count){
-		int di;
-		ulong dl;
-		ubyte* p;
-		Atom da;
-		if(XGetWindowProperty(dpy, window, property, 0L, count, false, format,
-		                      &da, &di, &count, &dl, &p) == 0 && p){
-			return p;
-		}
-		return null;
-	}
-
-	T[] _get_list(T)(ulong count){
-		auto p = _rawget(count);
-		auto d = (cast(T*)p)[0..count].dup;
-		XFree(p);
-		return d;
-	}
-
-	T _get_one(T)(){
-		ulong n=1;
-		auto p = _rawget(n);
+	FullType get(){
+		ulong count = List ? 0 : 1;
+		auto p = raw(count);
 		if(!p)
-			return T.init;
-		auto d = *(cast(T*)p);
+			return FullType.init;
+		FullType value;
+		static if(List)
+			value = (cast(Type*)p)[0..count].dup;
+		else static if(is(Type == string))
+			value = (cast(char*)p)[0..count].to!string;
+		else
+			value = *(cast(Type*)p);
 		XFree(p);
-		return d;
+		return value;
 	}
 
-	void _request(T)(T[] data){
-		XEvent e;
-		e.type = ClientMessage;
-		e.xclient.window = window;
-		e.xclient.message_type = property;
-		e.xclient.format = 32;
-		e.xclient.data.l[0..data.length] = cast(long[])data;
-		XSendEvent(dpy, root, false, SubstructureNotifyMask|SubstructureRedirectMask, &e);
+	void set(FullType data){
+		static if(List){
+			rawset(Format, 32, PropModeReplace, data.ptr, data.length);
+		}else static if(is(Type == string)){
+			rawset(XInternAtom(wm.displayHandle, "UTF8_STRING", False), 8, PropModeReplace, data.toStringz, data.length);
+		}else{
+			rawset(Format, 32, PropModeReplace, &data, 1);
+		}
 	}
 
-	void set(CARDINAL data){
-		XChangeProperty(dpy, window, property, format, 32, PropModeReplace, cast(ubyte*)&data, 1);
-	}
-
-	void setAtoms(Atom[] data){
-		XChangeProperty(dpy, window, property, format, 32, PropModeReplace, cast(ubyte*)data.ptr, cast(int)data.length);
-	}
 
 }
 
-class AtomProperty: Property {
-	
-	this(x11.X.Window window, string name){
-		super(window, name);
-		format = XA_ATOM;
-	}
-
-	Atom get(){
-		return _get_one!Atom;
-	}
-	
-	void request(Atom[] data){
-		_request(data);
-	}
-
-}
-
-class AtomListProperty: Property {
-	
-	this(x11.X.Window window, string name){
-		super(window, name);
-		format = XA_ATOM;
-	}
-
-	Atom[] get(ulong n){
-		return _get_list!Atom(n);
-	}
-
-}
-
-class CardinalProperty: Property {
-
-	this(x11.X.Window window, string name){
-		super(window, name);
-		format = XA_CARDINAL;
-	}
-
-	CARDINAL get(){
-		return _get_one!CARDINAL;
-	}
-
-	void request(CARDINAL[] data){
-		_request(data);
-	}
-
-}
-
-class CardinalListProperty: Property {
-	
-	this(x11.X.Window window, string name){
-		super(window, name);
-		format = XA_CARDINAL;
-	}
-
-	CARDINAL[] get(ulong n){
-		return _get_list!CARDINAL(n);
-	}
-	
-}
-
-class WindowListProperty: Property {
-
-
-	this(x11.X.Window window, string name){
-		super(window, name);
-		format = XA_WINDOW;
-	}
-
-	x11.X.Window[] get(ulong n){
-		return _get_list!(x11.X.Window)(n);
-	}
-
-}
-
-void request(Atom atom, long[] data){
-	XEvent e;
-	e.type = ClientMessage;
-	e.xclient.message_type = atom;
-	e.xclient.format = 32;
-	e.xclient.data.l[0..data.length] = data;
-	XSendEvent(dpy, root, false, SubstructureNotifyMask|SubstructureRedirectMask, &e);
-}
-
-+/

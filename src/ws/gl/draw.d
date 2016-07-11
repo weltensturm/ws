@@ -150,7 +150,13 @@ class Draw {
 						batchRectTexture.addPoint([1, 1, 0], [1,1]);
 						batchRectTexture.addPoint([0, 1, 0], [0,1]);
 						batchRectTexture.finish();
-						shaders[t] = Shader.load("2d_texture", [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"], null, TEXTURE_VERT, TEXTURE_FRAG);
+						shaders[t] = Shader.load(
+								"2d_texture",
+								[gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"],
+								null,
+								TEXTURE_VERT,
+								TEXTURE_FRAG
+						);
 						break;
 					case type.rect:
 						batchRect = new Batch;
@@ -160,7 +166,13 @@ class Draw {
 						batchRect.add([1, 1, 0]);
 						batchRect.add([0, 1, 0]);
 						batchRect.finish();
-						shaders[t] = Shader.load("2d_rect", [gl.attributeVertex: "vVertex"], null, RECT_VERT, RECT_FRAG);
+						shaders[t] = Shader.load(
+								"2d_rect",
+								[gl.attributeVertex: "vVertex"],
+								null,
+								RECT_VERT,
+								RECT_FRAG
+						);
 						break;
 					case type.line:
 						batchLine = new Batch;
@@ -321,7 +333,13 @@ class GlDraw: DrawEmpty {
 						batchRectTexture.addPoint([1, 1, 0], [1,1]);
 						batchRectTexture.addPoint([0, 1, 0], [0,1]);
 						batchRectTexture.finish();
-						shaders[t] = Shader.load("2d_texture", [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"], null, TEXTURE_VERT, TEXTURE_FRAG);
+						shaders[t] = Shader.load(
+								"2d_texture",
+								[gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"],
+								null,
+								TEXTURE_VERT,
+								TEXTURE_FRAG
+						);
 						break;
 					case type.rect:
 						batchRect = new Batch;
@@ -331,7 +349,13 @@ class GlDraw: DrawEmpty {
 						batchRect.add([1, 1, 0]);
 						batchRect.add([0, 1, 0]);
 						batchRect.finish();
-						shaders[t] = Shader.load("2d_rect", [gl.attributeVertex: "vVertex"], null, RECT_VERT, RECT_FRAG);
+						shaders[t] = Shader.load(
+								"2d_rect",
+								[gl.attributeVertex: "vVertex"],
+								null,
+								RECT_VERT,
+								RECT_FRAG
+						);
 						break;
 					case type.line:
 						batchLine = new Batch;
@@ -339,10 +363,22 @@ class GlDraw: DrawEmpty {
 						batchLine.add([0,0,0]);
 						batchLine.add([0,10,0]);
 						batchLine.finish();
-						shaders[t] = Shader.load("2d_rect", [gl.attributeVertex: "vVertex"], null, RECT_VERT, RECT_FRAG);
+						shaders[t] = Shader.load(
+								"2d_rect",
+								[gl.attributeVertex: "vVertex"],
+								null,
+								RECT_VERT,
+								RECT_FRAG
+						);
 						break;
 					case type.text:
-						shaders[t] = Shader.load("2d_texture", [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"], null, TEXTURE_VERT, TEXTURE_FRAG);
+						shaders[t] = Shader.load(
+								"2d_texture",
+								[gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"],
+								null,
+								TEXTURE_VERT,
+								TEXTURE_FRAG
+						);
 				}
 			}
 			shaders[t].use();
