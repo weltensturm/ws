@@ -2,6 +2,7 @@ module ws.gl.draw;
 
 import
 	std.conv,
+	std.algorithm,
 	ws.exception,
 	ws.draw,
 	ws.gl.gl,
@@ -273,6 +274,10 @@ class GlDraw: DrawEmpty {
 		s["Scale"].set(scale);
 		batchLine.updateVertices([end.x-start.x+0.25, end.y-start.y+0.25, 0], 1);
 		batchLine.draw();
+	}
+
+	override int width(string text){
+		return text.dtext.map!(a => font[a].advance).sum.to!int;
 	}
 
 	override int text(int[2] pos, string text, double offset=-0.2){

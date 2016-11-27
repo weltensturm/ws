@@ -38,8 +38,6 @@ class X11Window: Base {
 
 	XSetWindowAttributes windowAttributes;
 
-	bool onlyNotify;
-
 	Atom wmDelete;
 
 	this(int w, int h, string t, bool override_redirect=false){
@@ -100,7 +98,7 @@ class X11Window: Base {
 		gcInit;
 		drawInit;
 		show;
-		resize(size);
+		resized(size);
 		assert(windowHandle);
 	}
 
@@ -138,6 +136,7 @@ class X11Window: Base {
 
 	override void onDraw(){
 		super.onDraw;
+		draw.finishFrame;
 	}
 
 	void onDestroy(){
@@ -268,14 +267,10 @@ class X11Window: Base {
 		switch(e.type){
 			case ConfigureNotify:
 				if(size.x != e.xconfigure.width || size.y != e.xconfigure.height){
-					onlyNotify = true;
-					resize([e.xconfigure.width, e.xconfigure.height]);
-					onlyNotify = false;
+					resized([e.xconfigure.width, e.xconfigure.height]);
 				}
 				if(pos.x != e.xconfigure.x || pos.y != e.xconfigure.y){
-					onlyNotify = true;
-					move([e.xconfigure.x, e.xconfigure.y]);
-					onlyNotify = false;
+					moved([e.xconfigure.x, e.xconfigure.y]);
 				}
 				break;
 			case KeyPress:
@@ -284,13 +279,8 @@ class X11Window: Base {
 				KeySym ks;
 				Status st;
 				size_t l = Xutf8LookupString(inputContext, &e.xkey, str.ptr, 25, &ks, &st);
-				if(l){
-					string s;
-					for(size_t i=0; i<l; ++i)
-						s ~= str[i];
-					foreach(dchar c; s)
-						onKeyboard(c);
-				}
+				foreach(dchar c; str[0..l])
+					onKeyboard(c);
 				break;
 			case KeyRelease: onKeyboard(cast(Keyboard.key)XLookupKeysym(&e.xkey,0), false); break;
 			case MotionNotify:
@@ -329,16 +319,20 @@ class X11Window: Base {
 	}
 
 	override void resize(int[2] size){
-		if(!onlyNotify)
-			XResizeWindow(wm.displayHandle, windowHandle, size.w, size.h);
-		super.resize(size);
+		XResizeWindow(wm.displayHandle, windowHandle, size.w, size.h);
+	}
+
+	override void move(int[2] pos){
+		XMoveWindow(wm.displayHandle, windowHandle, pos.x, pos.y);
+	}
+
+	void resized(int[2] size){
+		this.size = size;
 		if(draw)
 			draw.resize(size);
 	}
 
-	override void move(int[2] pos){
-		if(!onlyNotify)
-			XMoveWindow(wm.displayHandle, windowHandle, pos.x, pos.y);
+	void moved(int[2] pos){
 		this.pos = pos;
 	}
 

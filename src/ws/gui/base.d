@@ -46,7 +46,8 @@ class Base {
 	
 
 	Base add(Base gui){
-		assert(!gui.parent);
+		if(gui.parent)
+			throw new Exception("Trying to embed element that already has a parent");
 		gui.parent = this;
 		gui.hidden = false;
 		children ~= gui;
@@ -141,14 +142,12 @@ class Base {
 		child.onKeyboardFocus(true);
 	}
 
-	@property
 	bool hasFocus(){
 		if(!parent)
 			return false;
 		return parent.keyboardChild == this;
 	}
 
-	@property
 	bool hasMouseFocus(){
 		if(!parent)
 			return false;

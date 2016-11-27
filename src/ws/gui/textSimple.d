@@ -2,6 +2,8 @@ module ws.gui.textSimple;
 
 import
 	std.utf,
+	std.algorithm,
+	std.conv,
 	ws.io,
 	ws.list,
 	ws.gl.gl,
@@ -19,6 +21,8 @@ class Text: Base {
 	string font;
 	int fontSize;
 
+	double offset = -0.2;
+
 	this(){
 		style.bg.normal = [0, 0, 0, 0.5];
 		style.fg.normal = [1, 1, 1, 1];
@@ -35,7 +39,10 @@ class Text: Base {
 	override void onDraw(){
 		draw.setFont(font, fontSize);
 		draw.setColor(style.fg.normal);
-		draw.text(pos, size.h, text);
+		auto offsetRight = max(0.0,-offset)*fontSize;
+		auto offsetLeft = max(0.0,offset-1)*fontSize;
+		auto x = pos.x - min(1,max(0,offset))*draw.width(text) + offsetRight - offsetLeft;
+		draw.text([x.to!int, pos.y], size.h, text);
 	}
 
 }
