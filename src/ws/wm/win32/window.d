@@ -176,7 +176,7 @@ class Win32Window: Base {
 		};
 		int pixelFormat = ChoosePixelFormat(deviceContext, &pfd);
 		SetPixelFormat(deviceContext, pixelFormat, &pfd);
-		graphicsContext = wglCreateContext(deviceContext);
+		graphicsContext = core.sys.windows.wingdi.wglCreateContext(deviceContext);
 		wglMakeCurrent(deviceContext, graphicsContext);
 	}
 

@@ -98,6 +98,16 @@ class XDraw: DrawEmpty {
 		frontBuffer = XRenderCreatePicture(dpy, drawable, format, CPSubwindowMode, &pa);
 	}
 
+	this(x11.X.Window root, Drawable drawable, Picture frontBuffer){
+		dpy = wm.displayHandle;
+		screen = DefaultScreen(dpy);
+		XWindowAttributes wa;
+		XGetWindowAttributes(dpy, root, &wa);
+		this.drawable = drawable;
+		this.frontBuffer = frontBuffer;
+		xft = XftDrawCreate(dpy, drawable, wa.visual, wa.colormap);
+	}
+
 	~this(){
 		if(drawable)
 			XFreePixmap(dpy, drawable);
@@ -180,7 +190,8 @@ class XDraw: DrawEmpty {
 		}
 		auto rect = XRectangle(cast(short)pos[0], cast(short)pos[1], cast(short)size[0], cast(short)size[1]);
 		XftDrawSetClipRectangles(xft, 0, 0, &rect, 1);
-		XSetClipRectangles(dpy, gc, 0, 0, &rect, 1, Unsorted);
+		if(gc)
+			XSetClipRectangles(dpy, gc, 0, 0, &rect, 1, Unsorted);
 		clipStack ~= rect;
 	}
 
@@ -189,9 +200,11 @@ class XDraw: DrawEmpty {
 		if(clipStack.length){
 			auto rect = clipStack[$-1];
 			XftDrawSetClipRectangles(xft, 0, 0, &rect, 1);
-			XSetClipRectangles(dpy, gc, 0, 0, &rect, 1, Unsorted);
+			if(gc)
+				XSetClipRectangles(dpy, gc, 0, 0, &rect, 1, Unsorted);
 		}else{
-			XSetClipMask(dpy, gc, None);
+			if(gc)
+				XSetClipMask(dpy, gc, None);
 			XftDrawSetClip(xft, null);
 		}
 	}

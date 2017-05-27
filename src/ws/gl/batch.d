@@ -137,18 +137,24 @@ class Batch {
 			if(!vertices)
 				vertices = new Array(3, gl.attributeVertex);
 			float* o = vertices.array+currentVert*3;
+			/+
 			o[0] = v[0];
 			o[1] = v[1];
 			o[2] = v[2];
+			+/
+			o[0..3] = v[0..3];
 		}
 
 		void addNormal(vec v){
 			if(!normals)
 				normals = new Array(3, gl.attributeNormal);
 			float* o = normals.array+currentVert*3;
+			/+
 			o[0] = v[0];
 			o[1] = v[1];
 			o[2] = v[2];
+			+/
+			o[0..3] = v[0..3];
 		}
 
 		void addColor(color c){

@@ -2,7 +2,6 @@ module ws.wm.win32.api;
 
 public import
 	derelict.opengl3.gl3,
-	derelict.opengl3.wgl,
 	core.sys.windows.windows;
 
 __gshared:

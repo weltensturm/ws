@@ -25,7 +25,7 @@ class Win32WindowManager: BaseWindowManager {
 	WNDCLASSW windowClass = {0};
 
 	void load(string s)(){
-		auto ptr = wglGetProcAddress(s);
+		auto ptr = core.sys.windows.wingdi.wglGetProcAddress(s);
 		if(!ptr)
 			throw new Exception("failed to get function \"" ~ s ~ "\"");
 		mixin(s ~ " = cast(typeof(" ~ s ~ "))ptr;");

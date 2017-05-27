@@ -48,6 +48,40 @@ class PropertyList {
 		}
 	}
 
+	void update(){
+		foreach(property; properties){
+			property.update;
+		}
+	}
+
+}
+
+mixin template PropertiesMixin(string name, string atom, int type, bool isList, Args...){
+	mixin("Property!(type, isList) " ~ name ~ ";");
+	static if(Args.length)
+		mixin PropertiesMixin!Args;
+}
+
+
+struct Properties(Args...) {
+
+	mixin PropertiesMixin!Args;
+	PropertyList propertyList;
+
+	void window(x11.X.Window window){
+		propertyList = new PropertyList;
+		void init(string name, string atom, int type, bool isList, Args...)(){
+			mixin(name ~ " = new Property!(type, isList)(window, atom, propertyList);");
+			static if(Args.length)
+				init!Args;
+		}
+		init!Args;
+	}
+
+	void update(Args...)(Args args){
+		propertyList.update(args);
+	}
+
 }
 
 
@@ -66,7 +100,7 @@ class Property(ulong Format, bool List): BaseProperty {
 		alias FullType = Type[];
 	else
 		alias FullType = Type;
-	
+
 	FullType value;
 
 	void delegate(FullType)[] handlers;
@@ -124,7 +158,7 @@ class Property(ulong Format, bool List): BaseProperty {
 		e.xclient.data.l[0..data.length] = cast(long[])data;
 		XSendEvent(wm.displayHandle, XDefaultRootWindow(wm.displayHandle), false, SubstructureNotifyMask|SubstructureRedirectMask, &e);
 	}
-	
+
 	FullType get(){
 		ulong count = List ? 0 : 1;
 		auto p = raw(count);
@@ -151,6 +185,4 @@ class Property(ulong Format, bool List): BaseProperty {
 		}
 	}
 
-
 }
-

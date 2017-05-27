@@ -37,7 +37,9 @@ class X11WindowManager: BaseWindowManager {
 		super();
 		DerelictGL3.load();
 		displayHandle = XOpenDisplay(null);
-		XSynchronize(displayHandle, true);
+		debug {
+			XSynchronize(displayHandle, true);
+		}
 		glCore = true;
 		//load!("glXCreateContextAttribsARB");
 		if(!glXCreateContextAttribsARB)
@@ -64,7 +66,7 @@ class X11WindowManager: BaseWindowManager {
 				throw new Exception("osWindow Initialisation: Failed to get frame buffer configuration. Are your drivers up to date?");
 			graphicsInfo = cast(XVisualInfo*)glXGetVisualFromFBConfig(displayHandle, mFBConfig[0]);
 		}else{*/{
-			
+
 			if(true){
 				GLint[] att = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_ALPHA_SIZE, 8, GLX_DOUBLEBUFFER, 0];
 				graphicsInfo = cast(XVisualInfo*)glXChooseVisual(displayHandle, 0, att.ptr);
@@ -86,7 +88,7 @@ class X11WindowManager: BaseWindowManager {
 
 	void delegate(XEvent*)[][int][x11.X.Window] handler;
 	void delegate(XEvent*)[][int] handlerAll;
-	
+
 	void on(void delegate(XEvent*)[int] handlers){
 		foreach(ev, dg; handlers){
 			handlerAll[ev] ~= dg;
@@ -102,9 +104,9 @@ class X11WindowManager: BaseWindowManager {
 			}
 			handler[window][ev] ~= dg;
 		}
-		XSelectInput(displayHandle, window, mask);
+		//XSelectInput(displayHandle, window, mask);
 	}
-	
+
 	~this(){
 		XCloseDisplay(displayHandle);
 	}

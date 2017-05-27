@@ -8,6 +8,7 @@ import
 	ws.wm,
 	ws.gui.base,
 	ws.list,
+	ws.x.draw,
 	derelict.opengl3.gl3,
 	ws.wm.x11.api;
 
@@ -20,7 +21,7 @@ class X11Window: Base {
 
 	Mouse.cursor cursor = Mouse.cursor.inherit;
 	string title;
-	bool isActive = false;
+	bool isActive = true;
 	WindowHandle windowHandle;
 	GraphicsContext graphicsContext;
 	List!Event eventQueue;
@@ -41,6 +42,7 @@ class X11Window: Base {
 	Atom wmDelete;
 
 	this(int w, int h, string t, bool override_redirect=false){
+		hidden = true;
 		title = t;
 		size = [w, h];
 		eventQueue = new List!Event;
@@ -97,28 +99,31 @@ class X11Window: Base {
 		XSetWMProtocols(wm.displayHandle, windowHandle, &wmDelete, 1);
 		gcInit;
 		drawInit;
-		show;
-		resized(size);
 		assert(windowHandle);
 	}
 
 
 	override void show(){
-		if(isActive)
+		if(!hidden)
 			return;
 		XMapWindow(wm.displayHandle, windowHandle);
 		gcActivate;
 		onShow;
 		onKeyboardFocus(true);
+		resized(size);
 	}
 	
 	override void onShow(){
-		isActive = true;
 		hidden = false;
 	}
 	
+	void close(){
+		isActive = false;
+		XDestroyWindow(wm.displayHandle, windowHandle);
+	}
+
 	override void hide(){
-		if(!isActive)
+		if(hidden)
 			return;
 		XUnmapWindow(wm.displayHandle, windowHandle);
 		onHide;
@@ -126,7 +131,6 @@ class X11Window: Base {
 	}
 	
 	override void onHide(){
-		isActive = false;
 		hidden = true;
 	}
 
@@ -140,6 +144,7 @@ class X11Window: Base {
 	}
 
 	void onDestroy(){
+		isActive = false;
 		draw.destroy;
 	}
 
@@ -305,7 +310,7 @@ class X11Window: Base {
 			case Expose: onDraw(); break;
 			case ClientMessage:
 				if(e.xclient.message_type == wmDelete){
-					hide();
+					close();
 				}
 				break;
 			case KeymapNotify: XRefreshKeyboardMapping(&e.xmapping); break;
@@ -373,7 +378,7 @@ class X11Window: Base {
 	}
 
 	void drawInit(){
-		//_draw = new GlDraw;
+		_draw = new XDraw(this);
 	}
 
 	long[2] getScreenSize(){

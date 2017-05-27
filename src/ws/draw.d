@@ -44,6 +44,6 @@ class DrawEmpty {
 
 	int width(string text){assert(false, "not implemented");}
 
-	void finishFrame(){assert(false, "not implemented");}
+	void finishFrame(){}
 
 }
