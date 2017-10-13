@@ -9,6 +9,7 @@ import
 	x11.Xlib,
 	x11.Xutil,
 	x11.Xatom,
+	ws.x.atoms,
 	ws.gui.base,
 	ws.wm;
 
@@ -71,7 +72,7 @@ struct Properties(Args...) {
 	void window(x11.X.Window window){
 		propertyList = new PropertyList;
 		void init(string name, string atom, int type, bool isList, Args...)(){
-			mixin(name ~ " = new Property!(type, isList)(window, atom, propertyList);");
+			mixin("this." ~ name ~ " = new Property!(type, isList)(window, atom, propertyList);");
 			static if(Args.length)
 				init!Args;
 		}
@@ -86,6 +87,8 @@ struct Properties(Args...) {
 
 
 class Property(ulong Format, bool List): BaseProperty {
+
+	bool exists;
 
 	static if(Format == XA_CARDINAL || Format == XA_PIXMAP)
 		alias Type = long;
@@ -129,9 +132,10 @@ class Property(ulong Format, bool List): BaseProperty {
 	}
 
 	override void update(){
-		value = get;
+		auto newValue = get;
 		foreach(handler; handlers)
-			handler(value);
+			handler(newValue);
+		value = newValue;
 	}
 
 	ubyte* raw(ref ulong count){
@@ -139,9 +143,11 @@ class Property(ulong Format, bool List): BaseProperty {
 		ulong dl;
 		ubyte* p;
 		Atom da;
-		if(XGetWindowProperty(wm.displayHandle, window, property, 0L, List || is(Type == string) ? long.max : 1, 0, is(Type == string) ? XInternAtom(wm.displayHandle, "UTF8_STRING", False) : Format, &da, &di, &count, &dl, &p) == 0 && p){
+		if(XGetWindowProperty(wm.displayHandle, window, property, 0L, List || is(Type == string) ? long.max : 1, 0, is(Type == string) ? Atoms.UTF8_STRING : Format, &da, &di, &count, &dl, &p) == 0 && p){
+			exists = true;
 			return p;
 		}
+		exists = false;
 		return null;
 	}
 
@@ -149,14 +155,18 @@ class Property(ulong Format, bool List): BaseProperty {
 		XChangeProperty(wm.displayHandle, window, property, format, size, mode, cast(ubyte*)data, cast(int)length);
 	}
 
-	void request(Type[] data){
+	void request(x11.X.Window window, Type[] data){
 		XEvent e;
 		e.type = ClientMessage;
 		e.xclient.window = window;
 		e.xclient.message_type = property;
 		e.xclient.format = 32;
 		e.xclient.data.l[0..data.length] = cast(long[])data;
-		XSendEvent(wm.displayHandle, XDefaultRootWindow(wm.displayHandle), false, SubstructureNotifyMask|SubstructureRedirectMask, &e);
+		XSendEvent(wm.displayHandle, this.window, false, SubstructureNotifyMask|SubstructureRedirectMask, &e);
+	}
+
+	void request(Type[] data){
+		request(window, data);
 	}
 
 	FullType get(){

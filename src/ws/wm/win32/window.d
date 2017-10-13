@@ -39,6 +39,8 @@ class Win32Window: Base {
 		bool _hasFocus;
 		
 	}
+	bool isActive = true;
+	DrawEmpty _draw;
 
 	this(WindowHandle handle){
 		windowHandle = handle;
@@ -101,6 +103,9 @@ class Win32Window: Base {
 
 	override void resize(int[2] size){
 		super.resize(size);
+	}
+
+	void resized(int[2] size){
 		glViewport(0,0,size.w,size.h);
 		if(draw)
 			draw.resize(size);
@@ -251,6 +256,10 @@ class Win32Window: Base {
 
 	void drawInit(){
 		//_draw = new GlDraw;
+	}
+
+	override int[2] cursorPos(){
+		return [lastX, lastY];
 	}
 
 	void initializeHandlers(){

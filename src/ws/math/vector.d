@@ -2,6 +2,8 @@
 module ws.math.vector;
 
 import
+	std.algorithm,
+	std.range,
 	std.math,
 	std.traits,
 	ws.string;
@@ -28,13 +30,12 @@ ref T z(T)(T[] array){
 	return array[2];
 }
 
+
 auto length(T)(T array) if(isStaticArray!T) {
-	auto res = array[0];
-	res = 0;
-	foreach(n; array)
-		res += n*n;
-	return asqrt(res);
+	return asqrt(array[].map!"a^^2".sum);
 }
+
+alias len = length;
 
 T normal(T)(T array) if(isStaticArray!T) {
 	auto len = array.length;

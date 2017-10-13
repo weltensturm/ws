@@ -59,6 +59,7 @@ class Tabs: Base {
 
 	Page addPage(TabButton button, Base gui){
 		add(button);
+		add(gui);
 		button.font = font;
 		button.fontSize = fontSize;
 		button.setStyle = buttonStyle;
@@ -75,7 +76,7 @@ class Tabs: Base {
 			active = current;
 			updateSize();
 		};
-		pages ~= Page(button, add(gui));
+		pages ~= Page(button, gui);
 		gui.hide();
 		updateSize();
 		return pages.back;

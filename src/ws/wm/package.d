@@ -31,12 +31,15 @@ version(Posix){
 }
 
 
-//static WindowManager wm;
-
 WindowManager wm(){
-	static WindowManager wm;
-	if(!wm)
+	static bool loaded;
+	__gshared WindowManager wm;
+	if(!loaded && wm)
+		return wm;//throw new Exception("Only one thread has access to wm");
+	if(!wm){
 		wm = new WindowManager;
+		loaded = true;
+	}
 	return wm;
 }
 

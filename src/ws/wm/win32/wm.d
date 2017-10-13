@@ -4,7 +4,9 @@ version(Windows):
 
 import
 	std.utf,
-
+	std.string,
+	std.conv,
+	
 	ws.list,
 	ws.log,
 	ws.gui.input,
@@ -38,8 +40,8 @@ class Win32WindowManager: BaseWindowManager {
 		
 		windowClass.lpfnWndProc = cast(WNDPROC)&internalEvents;
 		windowClass.hInstance = appInstance;
-		windowClass.hIcon = LoadIconA(null, IDI_APPLICATION);
-		windowClass.hCursor = LoadCursorA(null, IDC_ARROW);
+		windowClass.hIcon = LoadIconW(null, IDI_APPLICATION);
+		windowClass.hCursor = LoadCursorW(null, IDC_ARROW);
 		windowClass.hbrBackground = cast(HBRUSH)GetStockObject(BLACK_BRUSH);
 		windowClass.lpszClassName = "wm::windowClass".toUTF16z();
 		windowClass.style = CS_OWNDC;

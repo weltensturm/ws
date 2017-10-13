@@ -27,15 +27,12 @@ class Base {
 	Mouse.cursor cursor;
 	int[2] size;
 	int[2] pos;
-	int[2] cursorPos;
 	Base parent;
 	Base mouseChild;
 	Base keyboardChild;
 	bool hidden = false;
 	Base[] children;
-	DrawEmpty _draw;
 	bool[int] buttons;
-	bool dragging;
 	bool drawOutside = true;
 
 	T addNew(T, Args...)(Args args){
@@ -44,7 +41,6 @@ class Base {
 		return e;
 	}
 	
-
 	Base add(Base gui){
 		if(gui.parent)
 			throw new Exception("Trying to embed element that already has a parent");
@@ -59,12 +55,10 @@ class Base {
 	}
 
 	void remove(Base widget){
+		assert(widget.parent == this);
 		children = children.without(widget);
-		if(widget.parent == this)
-			widget.parent = null;
+		widget.parent = null;
 	}
-
-
 
 	Base findChild(int x, int y, Base[] filter=[]){
 		foreach(child; children){
@@ -185,7 +179,13 @@ class Base {
 		}
 		onHide();
 	}
-			
+
+	int[2] cursorPos(){
+		if(parent)
+			return parent.cursorPos;
+		return [-1, -1];
+	}
+
 	void onShow(){};
 	void onHide(){};
 	
@@ -227,23 +227,17 @@ class Base {
 
 	void onMouseMove(int x, int y){
 		bool foundFocus = false;
-		cursorPos = [x,y];
-		if(dragging || buttons.values.any && !dragging){
-			dragging = true;
+		auto child = findChild(x, y);
+		if(child == mouseChild){
 			foundFocus = true;
-		}else{
-			auto child = findChild(x, y);
-			if(child == mouseChild){
-				foundFocus = true;
-			}else if(child && child != this){
-				if(mouseChild)
-					mouseChild.onMouseFocus(false);
-				child.onMouseFocus(true);
-				if(wm.active)
-					wm.active.setCursor(child.cursor);
-				mouseChild = child;
-				foundFocus = true;
-			}
+		}else if(child && child != this){
+			if(mouseChild)
+				mouseChild.onMouseFocus(false);
+			child.onMouseFocus(true);
+			if(wm.active)
+				wm.active.setCursor(child.cursor);
+			mouseChild = child;
+			foundFocus = true;
 		}
 
 		if(mouseChild){
@@ -262,10 +256,6 @@ class Base {
 		buttons[b] = p;
 		if(mouseChild)
 			mouseChild.onMouseButton(b, p, x, y);
-		if(!buttons.values.any && dragging){
-			dragging = false;
-			onMouseMove(x, y);
-		}
 	};
 	
 	void onMouseFocus(bool f){
@@ -281,11 +271,8 @@ class Base {
 			wm.active.setCursor(cursor);
 	}
 	
-	@property
 	DrawEmpty draw(){
-		if(!_draw && parent)
-			return parent.draw;
-		return _draw;
+		return parent.draw;
 	}
 	
 	void onDraw(){

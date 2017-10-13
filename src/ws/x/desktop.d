@@ -65,6 +65,7 @@ DesktopEntry[] getAll(){
 			foreach(entry; (path.expandTilde~"/share/applications").dirEntries(SpanMode.breadth))
 				try
 					result ~= readDesktop(entry);
+				catch(FileException e){}
 				catch(Throwable t)
 					writeln("DESKTOP_ERROR %s: %s".format(entry, t));
 	}

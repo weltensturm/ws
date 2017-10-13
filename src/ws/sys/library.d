@@ -36,12 +36,28 @@ string loadFunc(string f)(){
 	return f ~ " = cast(typeof(" ~ f ~ "))l.get(\"" ~ f ~ "\");";
 }
 
+
+Library fillLibrary(alias Fillable)(string path){
+	auto library = new Library(path);
+	foreach(member; __traits(allMembers, Fillable)){
+		mixin("enum isFP = isFunctionPointer!(Fillable." ~ member ~ ");");
+		static if(isFP){
+			mixin("assert(!hasUnsharedAliasing!(typeof(Fillable." ~ member ~ ")));");
+			mixin("Fillable." ~ member ~ " = cast(typeof(Fillable." ~ member ~ "))library.get(member);");
+			mixin("assert(Fillable." ~ member ~ " != null);");
+		}
+	}
+	return library;
+}
+
+
 mixin template library(string refname, string name, Args...){
 
 	mixin("
 		struct " ~ refname ~ " {
-			static Library lib;
-			static this(){
+			import ws.log;
+			__gshared Library lib;
+			shared static this(){
 				try
 					lib = load();
 				catch(Exception e){
@@ -129,7 +145,7 @@ class Library {
 			LocalFree(cast(HLOCAL)msgBuf);
 			if(i >= 2)
 				i -= 2;
-			return text[0 .. i];
+			return text[0 .. i] ~ " (%s)".format(errcode);
 		}version(Posix){
 			auto err = dlerror();
 			if(!err)

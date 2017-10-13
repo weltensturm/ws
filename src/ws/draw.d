@@ -3,7 +3,7 @@ module ws.draw;
 
 class DrawEmpty {
 
-	void destroy(){assert(false, "not implemented");}
+	void destroy(){}
 
 	void resize(int[2] size){assert(false, "not implemented");}
 

@@ -138,7 +138,7 @@ class Decode {
 			}else if((state ? c.isContentChar() : c.isCommandChar()) || inQuote || currentLevel>1 || (currentLevel==1 && c != '}')){
 				data[state] ~= c;
 
-			}else if(data[0].length && !state){
+			}else if(data[0].strip.length && !state){
 				state = 1;
 				
 			}else if(state){

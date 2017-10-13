@@ -16,6 +16,7 @@ import
 	ws.wm,
 	ws.bindings.xft,
 	ws.gui.point,
+	ws.x.backbuffer,
 	ws.x.font;
 
 
@@ -55,6 +56,23 @@ class Icon {
 	}
 }
 
+
+class ManagedPicture {
+	Display* dpy;
+	Picture picture;
+	alias picture this;
+	this(Display* dpy, Drawable drawable, XRenderPictFormat* format){
+		this.dpy = dpy;
+		XRenderPictureAttributes pa;
+		pa.subwindow_mode = IncludeInferiors;
+		picture = XRenderCreatePicture(dpy, drawable, format, CPSubwindowMode, &pa);
+	}
+	~this(){
+		XRenderFreePicture(dpy, picture);
+	}
+}
+
+
 class XDraw: DrawEmpty {
 
 	int[2] size;
@@ -62,7 +80,6 @@ class XDraw: DrawEmpty {
 	int screen;
 	x11.X.Window window;
 	Visual* visual;
-	Drawable drawable;
 	XftDraw* xft;
 	GC gc;
 
@@ -74,7 +91,8 @@ class XDraw: DrawEmpty {
 
 	XRectangle[] clipStack;
 
-	Picture frontBuffer;
+	Xdbe.BackBuffer drawable;
+	ManagedPicture picture;
 
 	this(ws.wm.Window window){
 		this(wm.displayHandle, window.windowHandle);
@@ -87,61 +105,31 @@ class XDraw: DrawEmpty {
 		screen = DefaultScreen(dpy);
 		this.window = window;
 		this.size = [wa.width, wa.height];
-		drawable = XCreatePixmap(dpy, window, size.w, size.h, wa.depth);
 		gc = XCreateGC(dpy, window, 0, null);
 		XSetLineAttributes(dpy, gc, 1, LineSolid, CapButt, JoinMiter);
+		drawable = new Xdbe.BackBuffer(dpy, window);
 		xft = XftDrawCreate(dpy, drawable, wa.visual, wa.colormap);
 		visual = wa.visual;
 		auto format = XRenderFindVisualFormat(dpy, wa.visual);
-		XRenderPictureAttributes pa;
-		pa.subwindow_mode = IncludeInferiors;
-		frontBuffer = XRenderCreatePicture(dpy, drawable, format, CPSubwindowMode, &pa);
-	}
-
-	this(x11.X.Window root, Drawable drawable, Picture frontBuffer){
-		dpy = wm.displayHandle;
-		screen = DefaultScreen(dpy);
-		XWindowAttributes wa;
-		XGetWindowAttributes(dpy, root, &wa);
-		this.drawable = drawable;
-		this.frontBuffer = frontBuffer;
-		xft = XftDrawCreate(dpy, drawable, wa.visual, wa.colormap);
-	}
-
-	~this(){
-		if(drawable)
-			XFreePixmap(dpy, drawable);
-		if(frontBuffer)
-			XRenderFreePicture(dpy, frontBuffer);
+		picture = new ManagedPicture(dpy, drawable, format);
 	}
 
 	override int width(string text){
+		debug {
+			assert(font);
+		}
 		return font.width(text);
 	}
 
 	override void resize(int[2] size){
-		if(this.size == size)
-			return;
 		this.size = size;
-		if(drawable)
-			XFreePixmap(dpy, drawable);
-		drawable = XCreatePixmap(dpy, window, size.w, size.h, DefaultDepth(dpy, screen));
-		auto format = XRenderFindVisualFormat(dpy, visual);
-		XRenderPictureAttributes pa;
-		pa.subwindow_mode = IncludeInferiors;
-		if(frontBuffer)
-			XRenderFreePicture(dpy, frontBuffer);
-		frontBuffer = XRenderCreatePicture(dpy, drawable, format, CPSubwindowMode, &pa);
-		XftDrawChange(xft, drawable);
 	}
 
 	override void destroy(){
 		foreach(font; fonts)
 			font.destroy;
-		XFreePixmap(dpy, drawable);
-		XRenderFreePicture(dpy, frontBuffer);
 		drawable = None;
-		frontBuffer = None;
+		picture = None;
 		XftDrawDestroy(xft);
 		XFreeGC(dpy, gc);
 	}
@@ -190,6 +178,7 @@ class XDraw: DrawEmpty {
 		}
 		auto rect = XRectangle(cast(short)pos[0], cast(short)pos[1], cast(short)size[0], cast(short)size[1]);
 		XftDrawSetClipRectangles(xft, 0, 0, &rect, 1);
+		//XRenderSetPictureClipRectangles(dpy, picture, 0, 0, &rect, 1);
 		if(gc)
 			XSetClipRectangles(dpy, gc, 0, 0, &rect, 1, Unsorted);
 		clipStack ~= rect;
@@ -200,11 +189,14 @@ class XDraw: DrawEmpty {
 		if(clipStack.length){
 			auto rect = clipStack[$-1];
 			XftDrawSetClipRectangles(xft, 0, 0, &rect, 1);
+			//XRenderSetPictureClipRectangles(dpy, picture, 0, 0, &rect, 1);
 			if(gc)
 				XSetClipRectangles(dpy, gc, 0, 0, &rect, 1, Unsorted);
 		}else{
 			if(gc)
 				XSetClipMask(dpy, gc, None);
+			auto rect = XRectangle(0, 0, cast(short)size.w, cast(short)size.h);
+			//XRenderSetPictureClipRectangles(dpy, picture, 0, 0, &rect, 1);
 			XftDrawSetClip(xft, null);
 		}
 	}
@@ -217,12 +209,13 @@ class XDraw: DrawEmpty {
 			(this.color.rgba[2]*255*a).to!ushort,
 			(this.color.rgba[3]*255).to!ushort
 		};
-		XRenderFillRectangle(dpy, PictOpOver, frontBuffer, &color, pos.x, this.size.h-size.h-pos.y, size.w, size.h);
+		XRenderFillRectangle(dpy, PictOpOver, picture, &color, pos.x, this.size.h-size.h-pos.y, size.w, size.h);
 	}
 
 	override void rectOutline(int[2] pos, int[2] size){
-		XSetForeground(dpy, gc, color.pix);
-		XDrawRectangle(dpy, drawable, gc, pos.x, this.size.h-pos.y-size.h, size.w, size.h);
+		clip(pos.a + [1,1], size.a - [2,2]);
+		rect(pos, size);
+		noclip;
 	}
 
 	override void line(int[2] start, int[2] end){
@@ -232,6 +225,7 @@ class XDraw: DrawEmpty {
 
 	override int text(int[2] pos, string text, double offset=-0.2){
 		if(text.length){
+			text = text.replace("\t", "    ");
 			auto width = width(text);
 			auto fontHeight = font.h;
 			auto offsetRight = max(0.0,-offset)*fontHeight;
@@ -275,6 +269,7 @@ class XDraw: DrawEmpty {
      	res.picture = XRenderCreatePicture(dpy, pixmap, pictformat, 0, &attributes);
 		XRenderSetPictureFilter(dpy, res.picture, "best", null, 0);
 		XFreePixmap(dpy, pixmap);
+		XFreeGC(dpy, gc);
 
 		res.size = size;
 		return res;
@@ -293,12 +288,14 @@ class XDraw: DrawEmpty {
 			[XDoubleToFixed( 0 ), XDoubleToFixed( 0 ), XDoubleToFixed( scale )]
 		]};
 		XRenderSetPictureTransform(dpy, icon.picture, &xform);
-		XRenderComposite(dpy, PictOpOver, icon.picture, alpha, frontBuffer, 0, 0, 0, 0, x, y, (icon.size.w*scale).to!int, (icon.size.h*scale).to!int);
+		XRenderComposite(dpy, PictOpOver, icon.picture, alpha, picture, 0, 0, 0, 0, x, y, (icon.size.w*scale).to!int, (icon.size.h*scale).to!int);
 	}
 
 	override void finishFrame(){
-		XCopyArea(dpy, drawable, window, gc, 0, 0, size.w, size.h, 0, 0);
-		XSync(dpy, False);
+		//XCopyArea(dpy, drawable, window, gc, 0, 0, size.w, size.h, 0, 0);
+		//XRenderComposite(dpy, PictOpSrc, picture, None, frontBuffer, 0, 0, 0, 0, 0, 0, size.w, size.h);
+		drawable.swap;
+		//XSync(dpy, False);
 	}
 
 }
