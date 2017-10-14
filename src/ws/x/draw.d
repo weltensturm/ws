@@ -123,6 +123,11 @@ class XDraw: DrawEmpty {
 
 	override void resize(int[2] size){
 		this.size = size;
+		XWindowAttributes wa;
+		XGetWindowAttributes(dpy, window, &wa);
+		auto format = XRenderFindVisualFormat(dpy, wa.visual);
+		picture = new ManagedPicture(dpy, drawable, format);
+		XftDrawChange(xft, drawable);
 	}
 
 	override void destroy(){
