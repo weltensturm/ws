@@ -17,7 +17,7 @@
 	"sourcePaths": ["src"],
 	"importPaths": ["src"],
 
-	"libs-posix": ["X11", "GL", "Xrender", "Xft", "fontconfig", "Xext"],
+	"libs-posix": ["X11", "GL", "Xrender", "Xft", "fontconfig", "Xext", "Xfixes", "Xinerama"],
 	"libs-windows": ["opengl32"],
 
 	"license": "MIT"

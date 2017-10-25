@@ -11,6 +11,7 @@ import
 
 extern(C){
 
+	alias Picture = XID;
 	alias XftChar8 = char;
 	alias XftResult = FcResult;
 
@@ -27,6 +28,8 @@ extern(C){
 		FcPattern* pattern;
 	}
 	struct XftDraw{}
+
+	Picture XftDrawPicture(XftDraw *draw);
 
 	void XftFontClose(Display*, XftFont*);
 	XftDraw *XftDrawCreate (Display*, Drawable, Visual*, Colormap);
