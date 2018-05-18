@@ -1,6 +1,7 @@
 module ws.gui.inputField;
 
 import
+	std.conv,
 	ws.event,
 	ws.io,
 	ws.time,
@@ -10,24 +11,43 @@ import
 	ws.gui.text;
 
 
-class InputField: Text {
+class InputField: Base {
 	
 	bool hasFocus = false;
 	Event!string onEnter;
 
+	string rawText;
+	size_t cursor;
+
 	string error;
 	double errorTime;
 	bool blockChar;
+	string font;
+	size_t fontSize;
 
 	this(){
-		super();
 		setCursor(Mouse.cursor.text);
 		onEnter = new Event!string;
 	}
 
+	string text(){
+		return rawText;
+	}
+
+	void text(string text){
+		rawText = text;
+		cursor = cursor.min(text.length).max(0);
+	}
+
+	void setFont(string font, size_t size){
+		this.font = font;
+		this.fontSize = size;
+	}
+
 	override void onKeyboard(dchar c){
-		if(hasFocus && !blockChar){
-			text ~= c;
+		if(!blockChar){
+			text = text[0..cursor] ~ c.to!string ~ text[cursor..$];
+			cursor++;
 			blockChar = false;
 		}
 	}
@@ -38,26 +58,21 @@ class InputField: Text {
 		blockChar = true;
 		switch(key){
 			case Keyboard.backspace:
-				if(text.cursor.prev){
-					auto toDelete = text.cursor.prev;
-					text.cursor.prev = toDelete.prev;
-					text.remove(toDelete);
-					text.update(text.cursor.prev);
+				if(cursor > 0){
+					rawText = rawText[0..cursor-1] ~ rawText[cursor..$];
+					cursor--;
 				}
 				break;
 				
 			case Keyboard.del:
-				if(text.cursor.next){
-					auto toDelete = text.cursor.next;
-					text.cursor.next = toDelete.next;
-					text.remove(toDelete);
-					text.update(text.cursor.prev);
+				if(cursor < rawText.length){
+					rawText = rawText[0..cursor] ~ rawText[cursor+1..$];
 				}
 				break;
 				
 			case Keyboard.enter:
 				try
-					onEnter(text.toString());
+					onEnter(rawText);
 				catch(InputException e){
 					error = e.msg;
 					errorTime = now;
@@ -66,18 +81,18 @@ class InputField: Text {
 				
 			case Keyboard.right:
 				if(Keyboard.get(Keyboard.control))
-					while(text.cursor.next && text.cursor.next.get().c != ' ')
-						++text.cursor;
-				else
-					++text.cursor;
+					while(cursor < rawText.length && rawText[cursor+1] != ' ')
+						++cursor;
+				else if(cursor < rawText.length)
+					++cursor;
 				break;
 				
 			case Keyboard.left:
 				if(Keyboard.get(Keyboard.control))
-					while(text.cursor.prev && text.cursor.prev.get().c != ' ')
-						--text.cursor;
-				else
-					--text.cursor;
+					while(cursor > 0 && rawText[cursor-1] != ' ')
+						--cursor;
+				else if(cursor > 0)
+					--cursor;
 				break;
 				
 			default:
@@ -94,28 +109,24 @@ class InputField: Text {
 
 
 	override void onDraw(){
-		super.onDraw();
 		auto color = style.fg.normal;
-		if(hasFocus){
-			Draw.setColor(color[0], color[1], color[2], color[3]*clamp!float(sin(now*PI*2) + 0.5, 0, 1));
-			if(!text.cursor.prev)
-				Draw.line(pos[0] + 4, pos[1] + 3, pos[0] + 4, pos[1] + size[1]-2);
-			else {
-				auto lpos =
-						pos.a + text.cursor.prev.get().pos
-						+ [text.cursor.prev.get().glyph.advance+2, -2];
-				draw.line(lpos, lpos.a + [0, size[1]-4]);
-			}
+		if(hasFocus || hasMouseFocus){
+			auto alpha = (sin(now*PI*2)+0.5).min(1).max(0);
+			draw.setColor([1,1,1,alpha]);
+			int x = draw.width(text[0..cursor]);
+			draw.rect(pos.a + [x+4, 4], [1, size.h-8]);
 		}
 		auto t = now;
 		if(errorTime+2 > t){
 			auto alpha = clamp!float(errorTime+2 - t, 0, 1)/1;
-			Draw.setColor(1,0,0,alpha);
-			Draw.rect(pos, size);
-			Draw.setFont(font);
-			Draw.setColor(1,1,1,alpha);
-			Draw.text(pos.a + [2, cast(int)(font.size*0.6)], error);
+			draw.setColor([1,0,0,alpha]);
+			draw.rect(pos, size);
+			draw.setFont("Consolas", 9);
+			draw.setColor([1,1,1,alpha]);
+			draw.text(pos.a + [2, 0], size.h, error);
 		}
+		draw.setColor([1,1,1]);
+		draw.text(pos, size.h, text);
 	}
 
 

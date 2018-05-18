@@ -8,7 +8,7 @@ import
 	ws.animation,
 	ws.gl.draw,
 	ws.gui.base,
-	ws.gui.buttonSimple;
+	ws.gui.button;
 
 
 class DynamicList: Base {

@@ -3,18 +3,21 @@ module ws.math.quaternion;
 import std.math, ws.math.matrix, ws.math.vector, ws.math.angle;
 
 
+private alias Type = float;
+
+
 struct Quaternion {
 	
-	float w = 1;
-	float x = 0;
-	float y = 0;
-	float z = 0;
+	Type w = 1;
+	Type x = 0;
+	Type y = 0;
+	Type z = 0;
 	
-	this(float iw, float ix, float iy, float iz){
+	this(Type iw, Type ix, Type iy, Type iz){
 		w = iw; x = ix; y = iy; z = iz;
 	}
 	
-	this(float iw, Vector!3 v){
+	this(Type iw, Vector!3 v){
 		fromAngleAxis(iw, v);
 	}
 	
@@ -23,19 +26,19 @@ struct Quaternion {
 	}
 	
 	@property Quaternion normal(){
-		float len = length;
+		Type len = length;
 		return Quaternion(w/len, x/len, y/len, z/len);
 	}
 	
 	void normalize(){
-		float len = length;
+		Type len = length;
 		w /= len;
 		x /= len;
 		y /= len;
 		z /= len;
 	}
 	
-	@property float length(){
+	@property Type length(){
 		return sqrt(x*x + y*y + z*z + w*w);
 	}
 	
@@ -57,12 +60,12 @@ struct Quaternion {
 	
 	static Quaternion euler(Angle a){
 		Quaternion q;
-		float sinp = sin(a.p*PI/360);
-		float siny = sin(a.y*PI/360);
-		float sinr = sin(a.r*PI/360);
-		float cosp = cos(a.p*PI/360);
-		float cosy = cos(a.y*PI/360);
-		float cosr = cos(a.r*PI/360);
+		Type sinp = sin(a.p*PI/360);
+		Type siny = sin(a.y*PI/360);
+		Type sinr = sin(a.r*PI/360);
+		Type cosp = cos(a.p*PI/360);
+		Type cosy = cos(a.y*PI/360);
+		Type cosr = cos(a.r*PI/360);
 		q.x = sinr*cosp*cosy - cosr*sinp*siny;
 		q.y = cosr*sinp*cosy + sinr*cosp*siny;
 		q.z = cosr*cosp*siny - sinr*sinp*cosy;
@@ -103,7 +106,7 @@ struct Quaternion {
 		return ang;
 	}
 
-	Quaternion fromAngleAxis(float angle, Vector!3 dir){
+	Quaternion fromAngleAxis(Type angle, Vector!3 dir){
 		auto v = dir.normal;
 		auto s = sin(angle*PI/360);
 		this = Quaternion(
@@ -116,12 +119,12 @@ struct Quaternion {
 	}
 
 
-	void rotate(float angle, float x, float y, float z){
+	void rotate(Type angle, Type x, Type y, Type z){
 		rotate(angle, Vector!3(x,y,z));
 	}
 
 
-	void rotate(float angle, Vector!3 v){
+	void rotate(Type angle, Vector!3 v){
 		Quaternion t;
 		t.fromAngleAxis(angle, v);
 		this = t*this;
@@ -129,15 +132,15 @@ struct Quaternion {
 
 
 	Matrix!(4,4) matrix(){
-		float x2 = x * x;
-		float y2 = y * y;
-		float z2 = z * z;
-		float xy = x * y;
-		float xz = x * z;
-		float yz = y * z;
-		float wx = w * x;
-		float wy = w * y;
-		float wz = w * z;
+		Type x2 = x * x;
+		Type y2 = y * y;
+		Type z2 = z * z;
+		Type xy = x * y;
+		Type xz = x * z;
+		Type yz = y * z;
+		Type wx = w * x;
+		Type wy = w * y;
+		Type wz = w * z;
 
 		return new Matrix!(4,4)([
 			1-2*(y2 + z2), 2*(xy - wz), 2*(xz + wy), 0,

@@ -4,13 +4,16 @@ module ws.gl.shader;
 import
 	file = std.file,
 	std.string,
+	std.conv,
+	std.stdio,
 	ws.string,
 	ws.math.vector,
 	ws.math.matrix,
 	ws.log,
 	ws.exception,
 	ws.thread.loader,
-	ws.gl.gl;
+	ws.gl.gl,
+	ws.gl.context;
 
 
 __gshared:
@@ -18,47 +21,32 @@ __gshared:
 
 class Shader: Loadable {
 	protected:
-		this(){};
 		~this(){};
-		
+		GlContext context;
+
 	public:
 	
+		this(GlContext context){
+			this.context = context;
+		}
 
-		static Shader load(string dir, string[uint] attr, string[uint] frag=null){
-			string id = dir ~ tostring(attr) ~ tostring(frag);
-			if(id in shaderContainer)
-				return shaderContainer[id];
-			auto shader = prepare(id);
-			shader.start(dir);
-			shader.bindAttr(attr);
+		this(GlContext context, string dir, string[uint] attributes, string[uint] fragmentBindings=null){
+			this(context);
+			start(dir);
+			bindAttr(attributes);
+			if(fragmentBindings)
+				bindFrag(fragmentBindings);
+			finish;
+		};
+
+		this(GlContext context, string name, string[uint] attr, string[uint] frag, string vertex, string fragment){
+			this(context);
+			start(name, vertex, fragment);
+			bindAttr(attr);
 			if(frag)
-				shader.bindFrag(frag);
-			shader.finish();
-			return shader;
+				bindFrag(frag);
+			finish;
 		}
-
-		static Shader load(string name, string[uint] attr, string[uint] frag, string vertex, string fragment){
-			string id = name ~ tostring(attr) ~ tostring(frag);
-			if(id in shaderContainer)
-				return shaderContainer[id];
-			auto shader = prepare(id);
-			shader.start(name, vertex, fragment);
-			shader.bindAttr(attr);
-			if(frag)
-				shader.bindFrag(frag);
-			shader.finish();
-			return shader;
-		}
-
-
-		static Shader prepare(string id){
-			if(id in shaderContainer)
-				return shaderContainer[id];
-			auto shader = new Shader;
-			shaderContainer[id] = shader;
-			return shader;
-		}
-		
 
 		Uniform opIndex(string name){
 			if(name in uniforms)
@@ -67,11 +55,14 @@ class Shader: Loadable {
 			return uniforms[name];
 		}
 		
+		void opIndexAssign(T)(T value, string key){
+			auto uniform = this[key];
+			uniform.set(value);
+		}
 
 		void applyUniform(Args...)(Args args){
 			static if(args.length){
 				opIndex(args[0]).set(args[1]);
-				//gl.check(args[0]);
 				applyUniform(args[2..$]);
 			}
 		}
@@ -103,19 +94,18 @@ class Shader: Loadable {
 			try {
 				if(failed) return;
 				this.name = name;
-				shaderVertex = new gl.Shader(gl.shaderVertex, vertex);
-				shaderFragment = new gl.Shader(gl.shaderFragment, fragment);
-				program = new gl.Program;
+				shaderVertex = new gl.Shader(context, gl.shaderVertex, vertex);
+				shaderFragment = new gl.Shader(context, gl.shaderFragment, fragment);
+				program = new gl.Program(context);
 				program.attach(shaderVertex);
 				program.attach(shaderFragment);
 			}catch(Exception e){
-				exception("Failed to load shader \"" ~ name ~ "\"", e);
+				throw new Exception("Failed to load shader \"" ~ name ~ "\"\n" ~ e.to!string);
 			}
 		}
 
 
 		override void finish(){
-			assert(gl.active());
 			if(failed)
 				return;
 			program.link();
@@ -127,13 +117,13 @@ class Shader: Loadable {
 
 		void bindAttr(string[uint] attrs){
 			foreach(i, name; attrs)
-				glBindAttribLocation(program.program, i, name.toStringz);
+				context.bindAttribLocation(program.program, i, name.toStringz);
 		}
 
 
 		void bindFrag(string[uint] frags){
 			foreach(i, name; frags)
-				glBindFragDataLocation(program.program, i, name.toStringz);
+				context.bindFragDataLocation(program.program, i, name.toStringz);
 		}
 
 

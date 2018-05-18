@@ -8,6 +8,7 @@ import
     std.algorithm,
     std.math,
     std.conv,
+    std.range,
     x11.X,
     x11.Xlib,
     x11.extensions.render,
@@ -89,8 +90,8 @@ struct ClipStack {
         XRectangle r = {
             pos.x.to!short,
             pos.y.to!short,
-            size.w.to!ushort,
-            size.h.to!ushort
+            size.w.max(0).to!ushort,
+            size.h.max(0).to!ushort
         };
         XserverRegion region = XFixesCreateRegion(wm.displayHandle, &r, 1);
         if(stack.length)
@@ -168,7 +169,7 @@ class XDraw: DrawEmpty {
 
     override int width(string text){
         debug {
-            assert(font);
+            assert(font, "No font active");
         }
         return font.width(text);
     }
@@ -219,7 +220,8 @@ class XDraw: DrawEmpty {
     }
 
     override void clip(int[2] pos, int[2] size){
-        clipStack.push(pos, size);
+        clipStack.push([pos.x, this.size.h-size.h-pos.y], size);
+        //clipStack.push(pos, size);
         clipStack.clip(xft, gc, picture);
     }
 

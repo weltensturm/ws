@@ -73,6 +73,11 @@ class Base {
 		return this;
 	}
 
+	Base draggingChild(){
+		if(parent)
+			return parent.draggingChild;
+		return null;
+	}
 
 	Base drag(int[2] offset){
 		return null;
@@ -228,7 +233,7 @@ class Base {
 	void onMouseMove(int x, int y){
 		bool foundFocus = false;
 		auto child = findChild(x, y);
-		if(child == mouseChild){
+		if(child == mouseChild || draggingChild){
 			foundFocus = true;
 		}else if(child && child != this){
 			if(mouseChild)

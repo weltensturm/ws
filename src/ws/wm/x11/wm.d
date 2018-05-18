@@ -108,6 +108,10 @@ class X11WindowManager: BaseWindowManager {
 		XCloseDisplay(displayHandle);
 	}
 
+	GraphicsContext currentContext(){
+		return glXGetCurrentContext();
+	}
+
 	void processEvents(){
 		XEvent e;
 		while(XPending(wm.displayHandle)){
@@ -115,9 +119,6 @@ class X11WindowManager: BaseWindowManager {
 			foreach(win; wm.windows){
 				if(e.xany.window == win.windowHandle){
 					activeWindow = win;
-					version(OpenGL){
-						win.gcActivate;
-					}
 					win.processEvent(&e);
 				}
 			}

@@ -19,7 +19,9 @@ extern(C):
 	    FcResultOutOfMemory
     }
 	
-	enum FcMatchKind {
+	alias FcMatchKind = int;
+
+	enum: FcMatchKind {
 	    FcMatchPattern, FcMatchFont, FcMatchScan
 	}
 	
@@ -33,3 +35,8 @@ extern(C):
 	void FcDefaultSubstitute(FcPattern*);
 	void FcPatternDestroy(FcPattern*);
 	void FcCharSetDestroy(FcCharSet*);
+	void FcPatternPrint(const FcPattern *p);
+	FcPattern * FcFontMatch(FcConfig *config, FcPattern *p, FcResult *result);
+	FcResult FcPatternGetInteger(FcPattern *p, const char *object, int n, int *i);
+	FcResult FcPatternGetString(FcPattern *p, const char *object, int n, FcChar8 **s);
+	alias FcConfig = void*;

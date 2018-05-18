@@ -6,6 +6,7 @@ import
 	std.range,
 	std.math,
 	std.traits,
+	std.conv,
 	ws.string;
 
 
@@ -264,6 +265,9 @@ struct Vector(size_t Size = 3, Type = float) {
 		return s;
 	}
 
+	string to(T: string)(){
+		return "Vector(" ~ data.to!string[1..$-2] ~ ")";
+	}
 
 	Vector!(Size, T) to(T)(){
 		Vector!(Size, T) r;

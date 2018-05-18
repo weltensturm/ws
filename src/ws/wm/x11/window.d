@@ -37,6 +37,8 @@ class X11Window: Base {
 
 	bool _keyboardFocus;
 	bool mouseFocus;
+	Base _dragging;
+	bool draggingUnfocus;
 
 	this(WindowHandle handle){
 		assert(handle);
@@ -86,7 +88,7 @@ class X11Window: Base {
 		windowAttributes.background_pixmap = None;
 		windowAttributes.event_mask = eventMask;
 		windowAttributes.border_pixel = 0;
-		windowAttributes.bit_gravity = StaticGravity;
+		windowAttributes.bit_gravity = NorthWestGravity;
 		windowAttributes.colormap = XCreateColormap(wm.displayHandle, root, wm.graphicsInfo.visual, AllocNone);
 		
 		windowHandle = XCreateWindow(
@@ -112,7 +114,6 @@ class X11Window: Base {
 		utf8 = XInternAtom(wm.displayHandle, "UTF8_STRING", false);
 		netWmName = XInternAtom(wm.displayHandle, "_NET_WM_NAME".toStringz, False);
 		XSetWMProtocols(wm.displayHandle, windowHandle, &wmDelete, 1);
-		gcInit;
 		drawInit;
 		assert(windowHandle);
 	}
@@ -121,15 +122,40 @@ class X11Window: Base {
 		return _draw;
 	}
 
+	void draw(DrawEmpty draw){
+		_draw = draw;
+	}
+
 	override int[2] cursorPos(){
 		return _cursorPos;
+	}
+
+	override Base draggingChild(){
+		return _dragging;
+	}
+
+	override void onMouseButton(Mouse.button button, bool pressed, int x, int y){
+		if(button == Mouse.buttonLeft){
+			if(pressed){
+				auto child = mouseChild;
+				while(child && child.mouseChild){
+					child = child.mouseChild;
+				}
+				_dragging = child;
+			}else{
+				_dragging = null;
+				if(draggingUnfocus){
+					onMouseFocus(false);
+				}
+			}
+		}
+		super.onMouseButton(button, pressed, x, y);
 	}
 
 	override void show(){
 		if(!hidden)
 			return;
 		XMapWindow(wm.displayHandle, windowHandle);
-		gcActivate;
 		onShow;
 		resized(size);
 	}
@@ -353,10 +379,21 @@ class X11Window: Base {
 				break;
 			case ButtonPress: onMouseButton(e.xbutton.button, true, cursorPos.x, cursorPos.y); break;
 			case ButtonRelease: onMouseButton(e.xbutton.button, false, cursorPos.x, cursorPos.y); break;
-			case EnterNotify: onMouseFocus(true); mouseFocus=true; break;
-			case LeaveNotify: onMouseFocus(false); mouseFocus=false; break;
+			case EnterNotify:
+				onMouseFocus(true);
+				mouseFocus=true;
+				draggingUnfocus = false;
+				break;
+			case LeaveNotify:
+				if(!draggingChild){
+					onMouseFocus(false);
+					mouseFocus=false;
+				}else{
+					draggingUnfocus = true;
+				}
+				break;
 			case FocusIn: onKeyboardFocus(true); _keyboardFocus=true; break;
-			case FocusOut: onKeyboardFocus(false); _keyboardFocus=true; break;
+			case FocusOut: onKeyboardFocus(false); _keyboardFocus=false; break;
 			case MapNotify: onShow; break;
 			case UnmapNotify: onHide; break;
 			case DestroyNotify: onDestroy; break;
@@ -412,44 +449,8 @@ class X11Window: Base {
 		this.pos = pos;
 	}
 
-	void gcInit(){
-		try {
-			if(!wm.glCore)
-				throw new Exception("disabled");
-			int[] attribs = [
-				GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
-				GLX_CONTEXT_MINOR_VERSION_ARB, 3,
-				0
-			];
-			graphicsContext = wm.glXCreateContextAttribsARB(
-					wm.displayHandle, wm.mFBConfig[0], null, cast(int)True, attribs.ptr
-			);
-			if(!graphicsContext)
-				throw new Exception("glXCreateContextAttribsARB failed");
-		}catch(Exception e){
-			/+wm.glCore = false;
-			GLint att[] = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, 0];
-			wm.graphicsInfo = glXChooseVisual(wm.displayHandle, 0, att.ptr);
-			graphicsContext = glXCreateContext(wm.displayHandle, wm.graphicsInfo, null, True);+/
-			
-			graphicsContext = glXCreateContext(wm.displayHandle, cast(derelictX.XVisualInfo*)wm.graphicsInfo, null, True);
-			if(!graphicsContext)
-				throw new Exception("glXCreateContext failed");
-		}
-		gcActivate();
-		DerelictGL3.reload();
-	}
-	
-	
-	void gcActivate(){
-		if(!wm.activeWindow)
-			wm.activeWindow = this;
-		if(graphicsContext)
-			makeCurrent(graphicsContext);
-	}
-
 	void drawInit(){
-		_draw = new XDraw(this);
+		draw = new XDraw(this);
 	}
 
 	long[2] getScreenSize(){

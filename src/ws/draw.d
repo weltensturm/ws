@@ -26,7 +26,7 @@ class DrawEmpty {
 	}
 
 	void clip(int[2] pos, int[2] size){assert(false, "not implemented");}
-	void noclip(){assert(false, "not implemented");}
+	void noclip(){}
 
 	void rect(int[2] pos, int[2] size){assert(false, "not implemented");}
 
@@ -38,7 +38,7 @@ class DrawEmpty {
 
 	int fontHeight(){assert(false, "not implemented");}
 
-	int text(int[2] pos, string text, double offset=-1){assert(false, "not implemented");}
+	int text(int[2] pos, string text, double offset=-0.2){assert(false, "not implemented");}
 	
 	int text(int[2] pos, int h, string text, double offset=-0.2){assert(false, "not implemented");}
 

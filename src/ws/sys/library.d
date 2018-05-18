@@ -37,14 +37,22 @@ string loadFunc(string f)(){
 }
 
 
+bool compiles(string c)(){
+	mixin("return __traits(compiles, " ~ c ~ ");");
+}
+
+
 Library fillLibrary(alias Fillable)(string path){
 	auto library = new Library(path);
 	foreach(member; __traits(allMembers, Fillable)){
-		mixin("enum isFP = isFunctionPointer!(Fillable." ~ member ~ ");");
-		static if(isFP){
-			mixin("assert(!hasUnsharedAliasing!(typeof(Fillable." ~ member ~ ")));");
-			mixin("Fillable." ~ member ~ " = cast(typeof(Fillable." ~ member ~ "))library.get(member);");
-			mixin("assert(Fillable." ~ member ~ " != null);");
+		mixin("enum compiles = __traits(compiles, Fillable."~member~" !is null);");
+		static if(compiles){
+			mixin("enum isFP = isFunctionPointer!(Fillable." ~ member ~ ");");
+			static if(isFP){
+				mixin("assert(!hasUnsharedAliasing!(typeof(Fillable." ~ member ~ ")));");
+				mixin("Fillable." ~ member ~ " = cast(typeof(Fillable." ~ member ~ "))library.get(member);");
+				mixin("assert(Fillable." ~ member ~ " != null);");
+			}
 		}
 	}
 	return library;

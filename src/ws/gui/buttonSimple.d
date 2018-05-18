@@ -5,7 +5,7 @@ import
 	ws.gl.draw,
 	ws.gui.base,
 	ws.gui.style,
-	ws.gui.textSimple,
+	ws.gui.text,
 	ws.gui.point;
 
 

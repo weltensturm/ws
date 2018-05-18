@@ -32,14 +32,14 @@ class CheckBox: Button {
 
 	override void onDraw(){
 		super.onDraw();
-		Draw.setColor(1,0,0);
+		draw.setColor([1,0,0]);
 		auto height = size.y();
-		Draw.rect(pos.a + size - [height-3, height-3], [height-6, height-6]);
-		Draw.setColor(0,0,0);
-		Draw.rect(pos.a + size - [height-5, height-5], [height-10, height-10]);
+		draw.rect(pos.a + size - [height-3, height-3], [height-6, height-6]);
+		draw.setColor([0,0,0]);
+		draw.rect(pos.a + size - [height-5, height-5], [height-10, height-10]);
 		if(state){
-			Draw.setColor(1,0,0);
-			Draw.rect(pos.a+size-[height-7, height-7], [height-14, height-14]);
+			draw.setColor([1,0,0]);
+			draw.rect(pos.a+size-[height-7, height-7], [height-14, height-14]);
 		}
 	}
 
