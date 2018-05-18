@@ -9,8 +9,6 @@ version(linux)
 version(Windows)
 	import core.sys.windows.windows;
 
-__gshared:
-
 
 enum Keys = [
     "buttonLeft": Mouse.buttonLeft,

@@ -37,9 +37,6 @@ class X11WindowManager: BaseWindowManager {
 		super();
 		DerelictGL3.load();
 		displayHandle = XOpenDisplay(null);
-		debug {
-			XSynchronize(displayHandle, true);
-		}
 		glCore = true;
 		//load!("glXCreateContextAttribsARB");
 		if(!glXCreateContextAttribsARB)
@@ -111,14 +108,17 @@ class X11WindowManager: BaseWindowManager {
 		XCloseDisplay(displayHandle);
 	}
 
+	GraphicsContext currentContext(){
+		return glXGetCurrentContext();
+	}
+
 	void processEvents(){
+		XEvent e;
 		while(XPending(wm.displayHandle)){
-			XEvent e;
 			XNextEvent(wm.displayHandle, &e);
 			foreach(win; wm.windows){
 				if(e.xany.window == win.windowHandle){
 					activeWindow = win;
-					win.gcActivate;
 					win.processEvent(&e);
 				}
 			}
@@ -131,6 +131,7 @@ class X11WindowManager: BaseWindowManager {
 					foreach(handlerWindowType; handlerWindow[e.type])
 						handlerWindowType(&e);
 			}
+			
 		}
 	}
 

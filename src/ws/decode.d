@@ -112,7 +112,7 @@ class Decode {
 		string[2] data;
 		size_t state = 0;
 		long currentLevel = 0;
-		bool inQuote = false;
+		bool inString = false;
 		bool inComment = false;
 		int line = 1;
 
@@ -133,29 +133,30 @@ class Decode {
 			}else if(c == '#'){
 				inComment = true;
 			}else if(c == '\"'){
-				inQuote = !inQuote;
+				inString = !inString;
 
-			}else if((state ? c.isContentChar() : c.isCommandChar()) || inQuote || currentLevel>1 || (currentLevel==1 && c != '}')){
+			}else if((state ? c.isContentChar() : c.isCommandChar()) || inString || currentLevel>1 || (currentLevel==1 && c != '}')){
 				data[state] ~= c;
 
-			}else if(data[0].length && !state){
+			}else if(data[0].strip.length && !state){
 				state = 1;
 				
 			}else if(state){
 				if(!currentLevel && data[1].length){
-					callback(data[0], data[1], false);
+					callback(data[0].strip, data[1].strip, false);
 					state = 0;
 					data = ["", ""];
 				}
 			}
 
-			if(!inComment && !inQuote){
+			if(!inComment && !inString){
 				if(c == '{'){
+					state = 1;
 					++currentLevel;
 				}else if(c == '}'){
 					--currentLevel;
 					if(!currentLevel){
-						callback(data[0], data[1], true);
+						callback(data[0].strip, data[1].strip, true);
 						state = 0;
 						data = ["", ""];
 					}else if(currentLevel < 0)
@@ -181,22 +182,50 @@ class Decode {
 
 unittest {
 	string t =
-			"level1 {\n"
-			"	level2item1 cookies\n"
-			"	level2item2 hurr\n"
-			"#	level2comment awesomeness\n"
+			"level1 {\n" ~
+			"	level2item1 cookies\n" ~
+			"	level2item2 hurr\n" ~
+			"#	level2comment awesomeness\n" ~
+			"	level3block {\n" ~
+			"		a 1\n" ~
+			"	}\n" ~
 			"}";
 			
 	Decode.text(t, delegate(string cmd, string args, bool b){
 		assert(b && cmd == "level1");
 		Decode.text(args, delegate(string cmd2, string args2, bool b2){
-			assert(!b2);
+			assert(b2 == (cmd2 == "level3block"));
 			if(cmd2 == "level2item1")
 				assert(args2 == "cookies");
 			else if(cmd2 == "level2item2")
 				assert(args2 == "hurr");
-			else
+			else if(cmd2 == "level3block"){
+				assert(args2.strip() == "a 1");
+			}else
 				assert(0);
+		});
+	});
+
+	string anonblocks =
+			"level1 {\n" ~
+			"	{\n" ~
+			"		a 1\n" ~
+			"	 }\n" ~
+			"	{ b 2 }\n" ~
+			"}\n";
+
+	Decode.text(anonblocks, delegate(string cmd, string args, bool b){
+		assert(b && cmd == "level1");
+		Decode.text(args, delegate(string cmd2, string args2, bool b2){
+			assert(b2);
+			Decode.text(args2, delegate(string cmd3, string args3, bool b3){
+				if(cmd3 == "a")
+					assert(args3 == "1");
+				else if(cmd3 == "b")
+					assert(args3 == "2");
+				else
+					assert(false);
+			});
 		});
 	});
 }

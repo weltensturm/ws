@@ -4,7 +4,7 @@
 	
 	"description" : "weltensturm-library",
 	
-	"targetType": "library",
+	"targetType": "sourceLibrary",
 	"targetFileName": "ws",
 	
 	"dependencies" : {
@@ -17,7 +17,8 @@
 	"sourcePaths": ["src"],
 	"importPaths": ["src"],
 
-	"libs-posix": ["X11", "GL"],
+	"libs-posix": ["X11", "GL", "Xrender", "Xft", "fontconfig", "Xext", "Xfixes", "Xinerama"],
+	"libs-windows": ["opengl32", "user32"],
 
 	"license": "MIT"
 

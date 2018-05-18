@@ -16,10 +16,10 @@ class SliderDecorated: Base {
 	this(string t, float min = 0, float max = 1, float start = 0.5){
 		style.bg = [0, 0, 0, 0.5]; 
 		title = addNew!Text;
-		title.text.set(t);
+		title.text = t;
 		title.moveLocal([0,0]);
 		input = addNew!InputField;
-		input.text.set(tostring(start));
+		input.text = tostring(start);
 		input.onEnter ~= (line){
 			if(!isNumeric(line))
 				throw new InputException(input, "Not a number!");
@@ -31,15 +31,15 @@ class SliderDecorated: Base {
 		slider = addNew!Slider;
 		slider.set(start, min, max);
 		slider.onSlide ~= (v){
-			input.text.set(to!string(v));
+			input.text = to!string(v);
 		};
 		onSlide = slider.onSlide;
 	}
 	
 	override void resize(int[2] size){
 		
-		input.setFont("UbuntuMono-R", cast(int)(size.h/1.4));
-		title.setFont("UbuntuMono-R", cast(int)(size.h/1.4));
+		//input.setFont("UbuntuMono-R", cast(int)(size.h/1.4));
+		//title.setFont("UbuntuMono-R", cast(int)(size.h/1.4));
 		
 		int inputSize = size.h*5;
 		int divider = (size.w - inputSize)/2;
@@ -52,6 +52,7 @@ class SliderDecorated: Base {
 		
 		super.resize(size);
 		
+		assert(0);
 	}
 	
 	override void onDraw(){

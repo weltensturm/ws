@@ -28,6 +28,7 @@ class Font {
 		if(!name.length && !pattern)
 			throw new Exception("No font specified.");
 		this.dpy = dpy;
+		XSync(dpy, false);
 		if(name.length){
 			xfont = XftFontOpenName(dpy, screen, name.toStringz);
 			pattern = FcNameParse(cast(FcChar8*)name.toStringz);

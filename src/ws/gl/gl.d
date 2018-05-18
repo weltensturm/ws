@@ -4,10 +4,17 @@ module ws.gl.gl;
 public import derelict.opengl3.gl3;
 
 import
-	std.regex,
-	derelict.opengl3.wgl,
-	derelict.opengl3.glx,
-	ws.sys.library;
+    std.regex,
+    std.traits,
+    derelict.opengl3.wgl,
+    derelict.opengl3.glx,
+    ws.gl.context,
+    ws.wm,
+    ws.sys.library;
+
+version(Windows){
+	import ws.wm.win32.api;
+}
 
 /+
 pragma(lib, "DerelictGL3");
@@ -18,196 +25,198 @@ version(linux) pragma(lib, "dl");
 import std.string, ws.string, ws.exception;
 
 import
-	ws.io,
-	std.conv,
-	ws.math.vector,
-	ws.math.matrix;
+    ws.io,
+    std.conv,
+    ws.math.vector,
+    ws.math.matrix;
 
 __gshared:
 
 class gl {
-	const static int lines = GL_LINES;
-	const static int triangles = GL_TRIANGLES;
-	const static int triangleFan = GL_TRIANGLE_FAN;
-	
-	const static int arrayBuffer = GL_ARRAY_BUFFER;
-	
-	const static int compileStatus = GL_COMPILE_STATUS;
-	const static int linkStatus = GL_LINK_STATUS;
-	const static int shaderVertex = GL_VERTEX_SHADER;
-	const static int shaderFragment = GL_FRAGMENT_SHADER;
-	
-	const static int attributeVertex = 0;
-	const static int attributeNormal = 1;
-	const static int attributeColor = 2;
-	const static int attributeTexture = 3;
-	
-	static bool active(){
-		version(Windows)
-			return wglGetCurrentContext() != null;
-		version(Posix)
-			return glXGetCurrentContext() != null;
-	}
 
+    const static int lines = GL_LINES;
+    const static int triangles = GL_TRIANGLES;
+    const static int triangleFan = GL_TRIANGLE_FAN;
+    
+    const static int arrayBuffer = GL_ARRAY_BUFFER;
+    
+    const static int compileStatus = GL_COMPILE_STATUS;
+    const static int linkStatus = GL_LINK_STATUS;
+    const static int shaderVertex = GL_VERTEX_SHADER;
+    const static int shaderFragment = GL_FRAGMENT_SHADER;
+    
+    const static int attributeVertex = 0;
+    const static int attributeNormal = 1;
+    const static int attributeColor = 2;
+    const static int attributeTexture = 3;
+    
+    static GraphicsContext context(){
+        version(Windows)
+            return derelict.opengl3.wgl.wglGetCurrentContext();
+        version(Posix)
+            return glXGetCurrentContext();
+    }
 
-	/++
-		Checks for OpenGL errors.
-		
-		Resource-intensive, only call once each frame.
-	+/
-	static void check(T = string)(T info = T.init, string file = __FILE__, size_t line = __LINE__){
-		while(true){
-			GLenum error = glGetError();
-			if(!error) break;
-			exception("GL error, " ~ to!string(info) ~ ": " ~ to!string(cast(char*)gluErrorString(error)), null, file, line);
-		}
-	}
+    static bool active(){
+        return context != null;
+    }
 
-	static bool matrixTranspose = false;
-	
-	static class Shader {
+    static void check(T = string)(T info = T.init, string file = __FILE__, size_t line = __LINE__){
+        while(true){
+            GLenum error = glGetError();
+            if(!error) break;
+            throw new Exception("OpenGL error @" ~ info ~ ": " ~ to!string(cast(char*)gluErrorString(error)), null, file, line);
+        }
+    }
 
-		uint shader;
+    static bool matrixTranspose = false;
+    
+    static class Shader {
 
-		this(uint type, string text){
-			assert(gl.active());
-			shader = glCreateShader(type);
-			char*[1] tempPtr;
-			tempPtr[0] = cast(char*)(text.toStringz());
-			glShaderSource(shader, 1, cast(const char**)tempPtr, null);
-			glCompileShader(shader);
-			int r;
-			glGetShaderiv(shader, compileStatus, &r);
-			if(!r){
-				string msg;
-				auto log = getLog();
-				foreach(i, line; text.splitLines){
-					auto m = match(log, regex(r"[0-9]\(%s\) :".format(i+1)));
-					if(m)
-						msg ~= "!\t%s\t%s\n".format(i+1, line);
-					else
-						msg ~= "\t%s\t%s\n".format(i+1, line);
-				}
-				msg ~= (log ~ '\n');
-				exception("Failed to compile shader\n" ~ msg);
-			}
-		}
-		
-		string getLog(){
-			char[1024] log;
-			GLsizei length;
-			glGetShaderInfoLog(shader, 1024, &length, log.ptr);
-			string ret;
-			foreach(char c; log)
-				if(c != 255)
-					ret ~= c;
-				else
-					break;
-			return ret;
-		}
-		
-		~this(){
-			//glDeleteShader(shader);
-		}
-	}
+        uint shader;
+        GlContext context;
 
-	static class Program {
-		uint program;
+        this(GlContext context, uint type, string text){
+            this.context = context;
+            shader = context.createShader(type);
+            char*[1] tempPtr;
+            tempPtr[0] = cast(char*)(text.toStringz());
+            context.shaderSource(shader, 1, cast(const char**)tempPtr, null);
+            context.compileShader(shader);
+            int r;
+            context.getShaderiv(shader, compileStatus, &r);
+            if(!r){
+                string msg;
+                auto log = getLog();
+                foreach(i, line; text.splitLines){
+                    auto m = match(log, regex(r"[0-9]\(%s\) :".format(i+1)));
+                    if(m)
+                        msg ~= "!\t%s\t%s\n".format(i+1, line);
+                    else
+                        msg ~= "\t%s\t%s\n".format(i+1, line);
+                }
+                msg ~= (log ~ '\n');
+                exception("Failed to compile shader\n" ~ msg);
+            }
+        }
+        
+        string getLog(){
+            char[1024] log;
+            GLsizei length;
+            context.getShaderInfoLog(shader, 1024, &length, log.ptr);
+            string ret;
+            foreach(char c; log)
+                if(c != 255)
+                    ret ~= c;
+                else
+                    break;
+            return ret;
+        }
+        
+        ~this(){
+            //glDeleteShader(shader);
+        }
+    }
 
-		this(){
-			assert(gl.active());
-			program = glCreateProgram();
-		}
+    static class Program {
 
-		~this(){
-			//glDeleteProgram(program);
-		}
+        uint program;
+        GlContext context;
 
-		void attach(Shader s){
-			glAttachShader(program, s.shader);
-		}
+        this(GlContext context){
+            this.context = context;
+            program = context.createProgram();
+        }
 
-		string getLog(){
-			char[1024] log;
-			GLsizei length;
-			glGetProgramInfoLog(program, 1024, &length, log.ptr);
-			string ret;
-			foreach(char c; log)
-				if(c != 255)
-					ret ~= c;
-				else
-					break;
-			return ret;
-		}
+        ~this(){
+            //glDeleteProgram(program);
+        }
 
-		void link(){
-			glLinkProgram(program);
-			int r;
-			glGetProgramiv(program, linkStatus, &r);
-			if(!r)
-				exception("Failed to link shader: " ~ getLog());
-		}
+        void attach(Shader s){
+            context.attachShader(program, s.shader);
+        }
 
-		void use(){
-			glUseProgram(program);
-		}
+        string getLog(){
+            char[1024] log;
+            GLsizei length;
+            glGetProgramInfoLog(program, 1024, &length, log.ptr);
+            string ret;
+            foreach(char c; log)
+                if(c != 255)
+                    ret ~= c;
+                else
+                    break;
+            return ret;
+        }
 
-		void bindAttrib(uint idx, string name){
-			glBindAttribLocation(program, idx, name.toStringz());
-		}
+        void link(){
+            context.linkProgram(program);
+            int r;
+            context.getProgramiv(program, linkStatus, &r);
+            if(!r)
+                exception("Failed to link shader: " ~ getLog());
+        }
 
-		int getUniform(string n){
-			return glGetUniformLocation(program, n.toStringz());
-		}
-		
-		void uniform(const int pos, const int i){
-			glUniform1i(pos, i);
-		}
+        void use(){
+            context.useProgram(program);
+        }
 
-		void uniform(const int pos, const float f){
-			glUniform1f(pos, f);
-		}
-		
-		void uniform(const int pos, const float[3] f){
-			glUniform3fv(pos, 1, f.ptr);
-		}
-		
-		void uniform(const int pos, const float[4] f){
-			glUniform4fv(pos, 1, f.ptr);
-		}
-		
-		void uniform(const int pos, const float[3][3] m){
-			glUniformMatrix3fv(pos, 1, matrixTranspose ? GL_TRUE : GL_FALSE, m[0].ptr);
-		} 
-		
-		void uniform(const int pos, const float[4][4] m){
-			glUniformMatrix4fv(pos, 1, matrixTranspose ? GL_TRUE : GL_FALSE, m[0].ptr);
-		}
-		
-		void uniform(const int pos, Vector!3 v){
-			glUniform3fv(pos, 1, v.data.ptr);
-		}
-		
-		void uniform(const int pos, Matrix!(3,3) m){
-			glUniformMatrix3fv(pos, 1, matrixTranspose ? GL_TRUE : GL_FALSE, m.data.ptr);
-		}
-		
-		void uniform(const int pos, Matrix!(4,4) m){
-			glUniformMatrix4fv(pos, 1, matrixTranspose ? GL_TRUE : GL_FALSE, m.data.ptr);
-		}
-		
-	}
+        void bindAttrib(uint idx, string name){
+            context.bindAttribLocation(program, idx, name.toStringz());
+        }
+
+        int getUniform(string n){
+            return context.getUniformLocation(program, n.toStringz());
+        }
+        
+        void uniform(const int pos, const int i){
+            context.uniform1i(pos, i);
+        }
+
+        void uniform(const int pos, const float f){
+            context.uniform1f(pos, f);
+        }
+        
+        void uniform(const int pos, const float[3] f){
+            context.uniform3fv(pos, 1, f.ptr);
+        }
+        
+        void uniform(const int pos, const float[4] f){
+            context.uniform4fv(pos, 1, f.ptr);
+        }
+        
+        void uniform(const int pos, const float[3][3] m){
+            context.uniformMatrix3fv(pos, 1, matrixTranspose ? GL_TRUE : GL_FALSE, m[0].ptr);
+        } 
+        
+        void uniform(const int pos, const float[4][4] m){
+            context.uniformMatrix4fv(pos, 1, matrixTranspose ? GL_TRUE : GL_FALSE, m[0].ptr);
+        }
+        
+        void uniform(const int pos, Vector!3 v){
+            context.uniform3fv(pos, 1, v.data.ptr);
+        }
+        
+        void uniform(const int pos, Matrix!(3,3) m){
+            context.uniformMatrix3fv(pos, 1, matrixTranspose ? GL_TRUE : GL_FALSE, m.data.ptr);
+        }
+        
+        void uniform(const int pos, Matrix!(4,4) m){
+            context.uniformMatrix4fv(pos, 1, matrixTranspose ? GL_TRUE : GL_FALSE, m.data.ptr);
+        }
+        
+    }
 
 }
 
 
 version(Windows)
-	const string LIB_FILE = "GLU32";
+    const string LIB_FILE = "GLU32";
 version(Posix)
-	const string LIB_FILE = "GLU";
+    const string LIB_FILE = "GLU";
 
 extern(C)
-	mixin library!(
-		"OpenGL_Library", LIB_FILE,
-		"gluErrorString", const(GLubyte*) function(GLenum)
-	);
+    mixin library!(
+        "OpenGL_Library", LIB_FILE,
+        "gluErrorString", const(GLubyte*) function(GLenum)
+    );

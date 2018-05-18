@@ -2,8 +2,11 @@
 module ws.math.vector;
 
 import
+	std.algorithm,
+	std.range,
 	std.math,
 	std.traits,
+	std.conv,
 	ws.string;
 
 
@@ -28,13 +31,12 @@ ref T z(T)(T[] array){
 	return array[2];
 }
 
+
 auto length(T)(T array) if(isStaticArray!T) {
-	auto res = array[0];
-	res = 0;
-	foreach(n; array)
-		res += n*n;
-	return asqrt(res);
+	return asqrt(array[].map!"a^^2".sum);
 }
+
+alias len = length;
 
 T normal(T)(T array) if(isStaticArray!T) {
 	auto len = array.length;
@@ -263,6 +265,9 @@ struct Vector(size_t Size = 3, Type = float) {
 		return s;
 	}
 
+	string to(T: string)(){
+		return "Vector(" ~ data.to!string[1..$-2] ~ ")";
+	}
 
 	Vector!(Size, T) to(T)(){
 		Vector!(Size, T) r;
