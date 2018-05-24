@@ -16,7 +16,7 @@ import
 
 
 class GlDraw: DrawEmpty {
-    
+
     GlContext context;
 
     this(GlContext context){
@@ -73,18 +73,18 @@ class GlDraw: DrawEmpty {
         context.viewport(0,0,size.w,size.h);
         screen = size.to!(float[2]) ~ 1;
     }
-    
-    
+
+
     override void setColor(float[3] rgb){
         color = rgb ~ 1;
     }
-    
-    
+
+
     override void setColor(float[4] rgba){
         color = rgba;
     }
-    
-    
+
+
     override void setFont(string f, int size){
         font = fonts.get(context, f, size);
     }
@@ -98,7 +98,7 @@ class GlDraw: DrawEmpty {
         font = f;
     }
     +/
-    
+
     override void rect(int[2] pos, int[2] size){
         auto s = activateShader(type.rect);
         float[3] offset = [pos.x, pos.y, 1];
@@ -153,7 +153,7 @@ class GlDraw: DrawEmpty {
         batchRectTexture.draw();
     }
     +/
-    
+
     override void line(int[2] start, int[2] end){
         auto s = activateShader(type.line);
         float[3] offset = [start.x+0.25,start.y+0.25,0];
@@ -209,6 +209,11 @@ class GlDraw: DrawEmpty {
         return this.text(pos, text, offset);
     }
 
+    override void clear(){
+        glClearColor(0,0,0,0);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
+
     override void finishFrame(){
         rnd = Random(0);
         context.swapBuffers;
@@ -220,7 +225,7 @@ class GlDraw: DrawEmpty {
     float[4] color = [1,1,1,1];
 
     private:
-    
+
         CachedFactory!Font fonts;
         Font font;
         enum type {
@@ -249,7 +254,7 @@ class GlDraw: DrawEmpty {
             shader.use();
             return shader;
         }
-        
+
         Batch batchRect;
         Shader shaderRect;
         Batch batchRectTexture;
@@ -257,7 +262,7 @@ class GlDraw: DrawEmpty {
         Batch batchLine;
         Shader shaderLine;
         Shader shaderText;
-        
+
 }
 
 enum TextureShader {
@@ -347,4 +352,3 @@ enum RectShader {
         }
     "
 }
-

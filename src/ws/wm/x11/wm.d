@@ -64,7 +64,7 @@ class X11WindowManager: BaseWindowManager {
 			graphicsInfo = cast(XVisualInfo*)glXGetVisualFromFBConfig(displayHandle, mFBConfig[0]);
 		}else{*/{
 
-			if(true){
+			if(false){
 				GLint[] att = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_ALPHA_SIZE, 8, GLX_DOUBLEBUFFER, 0];
 				graphicsInfo = cast(XVisualInfo*)glXChooseVisual(displayHandle, 0, att.ptr);
 			}else{
@@ -131,7 +131,7 @@ class X11WindowManager: BaseWindowManager {
 					foreach(handlerWindowType; handlerWindow[e.type])
 						handlerWindowType(&e);
 			}
-			
+
 		}
 	}
 
