@@ -4,6 +4,9 @@ version(Posix):
 
 import
 	std.stdio,
+	std.traits,
+	std.meta,
+	std.algorithm,
 	derelict.opengl3.gl,
 	ws.wm,
 	ws.wm.baseWindowManager,
@@ -16,19 +19,59 @@ import
 __gshared:
 
 
-struct EventMaskMapping {
-	int mask;
-	int type;
+
+private struct Mapping(int m, int t, T, string fn){
+	enum mask = m;
+	enum type = t;
+	alias Event = T;
+	enum attribute = fn;
 }
 
-enum eventMaskMap = [
-	EventMaskMapping(ExposureMask, Expose),
-	EventMaskMapping(EnterWindowMask, EnterNotify),
-	EventMaskMapping(LeaveWindowMask, LeaveNotify),
-	EventMaskMapping(ButtonPressMask, ButtonPress),
-	EventMaskMapping(ButtonReleaseMask, ButtonRelease),
-	EventMaskMapping(PointerMotionMask, MotionNotify)
-];
+
+alias EventMap = AliasSeq!(
+	Mapping!(ButtonPressMask, 			ButtonPress, 		XButtonPressedEvent,		"xbutton"),
+	Mapping!(ButtonReleaseMask,			ButtonRelease, 		XButtonReleasedEvent,		"xbutton"),
+	Mapping!(ColormapChangeMask, 		ColormapNotify, 	XColormapEvent,				"xcolormap"),
+	Mapping!(EnterWindowMask, 			EnterNotify, 		XEnterWindowEvent,			"xcrossing"),
+	Mapping!(LeaveWindowMask, 			LeaveNotify, 		XLeaveWindowEvent,			"xcrossing"),
+	Mapping!(ExposureMask,				Expose, 			XExposeEvent,				"xexpose"),
+	Mapping!(GCGraphicsExposures, 		GraphicsExpose, 	XGraphicsExposeEvent,		"xgraphicsexpose"),
+	Mapping!(GCGraphicsExposures,		NoExpose, 			XNoExposeEvent,				"xnoexpose"),
+	Mapping!(FocusChangeMask, 			FocusIn, 			XFocusInEvent,				"xfocus"),
+	Mapping!(FocusChangeMask,			FocusOut, 			XFocusOutEvent,				"xfocus"),
+	Mapping!(KeymapStateMask, 			KeymapNotify, 		XKeymapEvent,				"xkeymap"),
+	Mapping!(KeyPressMask, 				KeyPress, 			XKeyPressedEvent,			"xkey"),
+	Mapping!(KeyReleaseMask, 			KeyRelease, 		XKeyReleasedEvent,			"xkey"),
+	Mapping!(PointerMotionMask, 		MotionNotify, 		XPointerMovedEvent,			"xmotion"),
+	Mapping!(PropertyChangeMask, 		PropertyNotify, 	XPropertyEvent,				"xproperty"),
+	Mapping!(ResizeRedirectMask, 		ResizeRequest, 		XResizeRequestEvent,		"xresizerequest"),
+	Mapping!(StructureNotifyMask, 		CirculateNotify, 	XCirculateEvent,			"xcirculate"),
+	Mapping!(StructureNotifyMask,		ConfigureNotify, 	XConfigureEvent,			"xconfigure"),
+	Mapping!(StructureNotifyMask,		DestroyNotify, 		XDestroyWindowEvent,		"xdestroywindow"),
+	Mapping!(StructureNotifyMask,		GravityNotify, 		XGravityEvent,				"xgravity"),
+	Mapping!(StructureNotifyMask,		MapNotify, 			XMapEvent,					"xmap"),
+	Mapping!(StructureNotifyMask,		ReparentNotify, 	XReparentEvent,				"xreparent"),
+	Mapping!(StructureNotifyMask,		UnmapNotify, 		XUnmapEvent,				"xunmap"),
+
+	Mapping!(SubstructureNotifyMask, 	CirculateNotify, 	XCirculateEvent,			"xcirculate"),
+	Mapping!(SubstructureNotifyMask,	ConfigureNotify, 	XConfigureEvent,            "xconfigure"),
+	Mapping!(SubstructureNotifyMask,	CreateNotify, 		XCreateWindowEvent,         "xcreatewindow"),
+	Mapping!(SubstructureNotifyMask,	GravityNotify, 		XGravityEvent,              "xgravity"),
+	Mapping!(SubstructureNotifyMask,	MapNotify, 			XMapEvent,                  "xmap"),
+	Mapping!(SubstructureNotifyMask,	ReparentNotify, 	XReparentEvent,             "xreparent"),
+	Mapping!(SubstructureNotifyMask,	UnmapNotify, 		XUnmapEvent,                "xunmap"),
+	Mapping!(SubstructureRedirectMask, 	CirculateRequest, 	XCirculateRequestEvent,     "xcirculaterequest"),
+	Mapping!(SubstructureRedirectMask,	ConfigureRequest, 	XConfigureRequestEvent,     "xconfigurerequest"),
+	Mapping!(SubstructureRedirectMask,	MapRequest, 		XMapRequestEvent,           "xmaprequest"),
+
+	Mapping!(None, 						ClientMessage, 		XClientMessageEvent,		"xclient"),
+	Mapping!(None, 						MappingNotify, 		XMappingEvent,				"xmapping"),
+	Mapping!(None, 						SelectionClear, 	XSelectionClearEvent,		"xselectionclear"),
+	Mapping!(None, 						SelectionNotify, 	XSelectionEvent,			"xselection"),
+	Mapping!(None, 						SelectionRequest, 	XSelectionRequestEvent,		"xselectionrequest"),
+	Mapping!(VisibilityChangeMask, 		VisibilityNotify, 	XVisibilityEvent,			"xvisibility")
+);
+
 
 class X11WindowManager: BaseWindowManager {
 
@@ -92,16 +135,33 @@ class X11WindowManager: BaseWindowManager {
 		}
 	}
 
-	void on(x11.X.Window window, void delegate(XEvent*)[int] handlers){
+	void on()(x11.X.Window window, void delegate(XEvent*)[int] handlers){
 		int mask;
 		foreach(ev, dg; handlers){
-			foreach(mapping; eventMaskMap){
+			foreach(mapping; EventMap){
 				if(mapping.type == ev)
 					mask |= mapping.mask;
 			}
 			handler[window][ev] ~= dg;
 		}
 		//XSelectInput(displayHandle, window, mask);
+	}
+
+	void on(Args...)(x11.X.Window window, Args args) if(allSatisfy!(isCallable, args)) {
+		int mask;
+		foreach(dg; args){
+			bool found;
+			foreach(mapping; EventMap){
+				static if(is(mapping.Event* == Parameters!dg[0])){
+					mask |= mapping.mask;
+					if(!found){
+						found = true;
+						handler[window][mapping.type] ~= (XEvent* e) => mixin("dg(&e." ~ mapping.attribute ~ ")");
+					}
+				}
+			}
+		}
+		XSelectInput(displayHandle, window, mask);
 	}
 
 	~this(){
