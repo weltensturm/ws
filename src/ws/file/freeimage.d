@@ -10,7 +10,7 @@ import
 
 
 shared static this(){
-	DerelictFI.load();
+	//DerelictFI.load();
 }
 
 
