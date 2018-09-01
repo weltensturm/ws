@@ -90,7 +90,7 @@ class Property(ulong Format, bool List): BaseProperty {
 
 	bool exists;
 
-	static if(Format == XA_CARDINAL || Format == XA_PIXMAP)
+	static if(Format == XA_CARDINAL || Format == XA_PIXMAP || Format == XA_VISUALID)
 		alias Type = long;
 	static if(Format == XA_ATOM)
 		alias Type = Atom;

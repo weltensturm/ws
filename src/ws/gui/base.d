@@ -35,12 +35,12 @@ class Base {
 	bool[int] buttons;
 	bool drawOutside = true;
 
-	T addNew(T, Args...)(Args args){
+	T addNew(alias T, Args...)(Args args){
 		T e = new T(args);
 		add(e);
 		return e;
 	}
-	
+
 	Base add(Base gui){
 		if(gui.parent)
 			throw new Exception("Trying to embed element that already has a parent");
@@ -96,7 +96,7 @@ class Base {
 
 	void drop(int x, int y, Base draggable){
 		if(findChild(x, y, [this,draggable]))
-			findChild(x, y, [this,draggable]).drop(x, y, draggable);	
+			findChild(x, y, [this,draggable]).drop(x, y, draggable);
 	}
 
 
@@ -193,9 +193,9 @@ class Base {
 
 	void onShow(){};
 	void onHide(){};
-	
+
 	void onClose(){};
-	
+
 	void resize(int[2] size){
 		this.size = size;
 	}
@@ -214,17 +214,17 @@ class Base {
 		else
 			move(pos);
 	}
-	
+
 	void onKeyboard(Keyboard.key key, bool pressed){
 		if(keyboardChild)
 			keyboardChild.onKeyboard(key, pressed);
 	};
-	
+
 	void onKeyboard(dchar c){
 		if(keyboardChild)
 			keyboardChild.onKeyboard(c);
 	};
-	
+
 	void onKeyboardFocus(bool focus){
 		if(keyboardChild)
 			keyboardChild.onKeyboardFocus(false);
@@ -256,30 +256,30 @@ class Base {
 			}
 		}
 	};
-	
+
 	void onMouseButton(Mouse.button b, bool p, int x, int y){
 		buttons[b] = p;
 		if(mouseChild)
 			mouseChild.onMouseButton(b, p, x, y);
 	};
-	
+
 	void onMouseFocus(bool f){
 		if(!f && mouseChild){
 			mouseChild.onMouseFocus(false);
 			mouseChild = null;
 		}
 	};
-	
+
 	void setCursor(Mouse.cursor c){
 		cursor = c;
 		if(parent && parent.mouseChild == this)
 			wm.active.setCursor(cursor);
 	}
-	
+
 	DrawEmpty draw(){
 		return parent.draw;
 	}
-	
+
 	void onDraw(){
 		foreach_reverse(c; children)
 			if(!c.hidden &&
@@ -290,7 +290,7 @@ class Base {
 					&& c.pos.y < pos.y+size.h))
 				c.onDraw;
 	}
-	
+
 	void setStyle(Style style){
 		this.style = style;
 	}

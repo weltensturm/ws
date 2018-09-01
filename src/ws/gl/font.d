@@ -30,9 +30,9 @@ private __gshared FT_Library ftLib;
 
 shared static this(){
     DerelictFT.missingSymbolCallback = (name){
-        if(name == "FT_Gzip_Uncompress")
+        //if(name == "FT_Gzip_Uncompress")
             return ShouldThrow.No;
-        return ShouldThrow.Yes;
+        //return ShouldThrow.Yes;
     };
     DerelictFT.load();
     FT_Error r = FT_Init_FreeType(&ftLib);
@@ -220,10 +220,14 @@ class Font {
             for(int x=0; x < width; x++){
                 auto pixel = &textureData[(x + y*width)*4];
                 pixel[0..3] = bitmap.buffer[(x + y*width)*3+y*pad .. (x + y*width)*3+y*pad+3];
+                pixel[3] = 1;
+                /+
+                pixel[0..3] = bitmap.buffer[(x + y*width)*3+y*pad .. (x + y*width)*3+y*pad+3];
                 pixel[3] = pixel[0..3].maxElement;
                 foreach(ref b; pixel[0..4])
                     b = b.applyGamma;
                 //pixel[3] = 255;
+                +/
             }
         }
         context.genTextures(1, &g.tex);
@@ -248,4 +252,3 @@ class Font {
     }
 
 };
-

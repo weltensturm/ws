@@ -25,9 +25,15 @@ class Slider: Base {
 	}
 
 	override void onMouseButton(Mouse.button b, bool p, int x, int y){
-		if(p)
+		if(b == Mouse.buttonLeft && p)
 			slide(x, y);
-		sliding = p;
+		sliding = b == Mouse.buttonLeft && p;
+		if(b == Mouse.wheelDown){
+			setValue((current - (max-min)/50).max(min).min(max));
+		}
+		if(b == Mouse.wheelUp){
+			setValue((current + (max-min)/50).max(min).min(max));
+		}
 	}
 
 	override void onMouseFocus(bool f){
@@ -41,8 +47,6 @@ class Slider: Base {
 	}
 
 	override void onDraw(){
-		draw.setColor(background);
-		draw.rect(pos, size);
 		draw.setColor([0,0,0,1]);
 		draw.rect(pos.a + [0, size.y/2-1], [size.x, 2]);
 		int x = cast(int)((current - min)/(max-min) * (size.x-width) + pos.x+width/2);

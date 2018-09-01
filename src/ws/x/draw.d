@@ -271,7 +271,7 @@ class XDraw: DrawEmpty {
         }
         return 0;
     }
-    
+
     override int text(int[2] pos, int h, string text, double offset=-0.2){
         pos.y += ((h-font.h)/2.0).lround;
         return this.text(pos, text, offset);
@@ -312,7 +312,7 @@ class XDraw: DrawEmpty {
         res.picture = XRenderCreatePicture(wm.displayHandle, pixmap, format, 0, null);
         XFreePixmap(wm.displayHandle, res.pixmap);
         +/
-        
+
     }
 
     void icon(Icon icon, int x, int y, double scale, Picture alpha=None){
@@ -325,6 +325,11 @@ class XDraw: DrawEmpty {
         XRenderComposite(dpy, PictOpOver, icon.picture, alpha, picture, 0, 0, 0, 0, x, y, (icon.size.w*scale).to!int, (icon.size.h*scale).to!int);
     }
 
+    override void clear(){
+        XRenderColor color = {0, 0, 0, 0};
+        XRenderFillRectangle(dpy, PictOpSrc, picture, &color, 0, 0, size.w, size.h);
+    }
+
     override void finishFrame(){
         //XCopyArea(dpy, drawable, window, gc, 0, 0, size.w, size.h, 0, 0);
         //XRenderComposite(dpy, PictOpSrc, picture, None, frontBuffer, 0, 0, 0, 0, 0, 0, size.w, size.h);
@@ -333,4 +338,3 @@ class XDraw: DrawEmpty {
     }
 
 }
-

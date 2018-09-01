@@ -59,7 +59,7 @@ class X11Window: Base {
 		title = t;
 		size = [w, h];
 		eventQueue = new List!Event;
-		
+
 		auto eventMask =
 				ExposureMask |
 				StructureNotifyMask |
@@ -73,7 +73,7 @@ class X11Window: Base {
 				EnterWindowMask |
 				LeaveWindowMask |
 				FocusChangeMask;
-		
+
 		auto windowMask =
 				CWBorderPixel |
 				CWBitGravity |
@@ -90,7 +90,7 @@ class X11Window: Base {
 		windowAttributes.border_pixel = 0;
 		windowAttributes.bit_gravity = NorthWestGravity;
 		windowAttributes.colormap = XCreateColormap(wm.displayHandle, root, wm.graphicsInfo.visual, AllocNone);
-		
+
 		windowHandle = XCreateWindow(
 			wm.displayHandle,
 			root,
@@ -101,7 +101,7 @@ class X11Window: Base {
 			windowMask,
 			&windowAttributes
 		);
-		
+
 		inputContext = XCreateIC(
 			XOpenIM(wm.displayHandle, null, null, null),
 			XNClientWindow, windowHandle,
@@ -153,33 +153,27 @@ class X11Window: Base {
 	}
 
 	override void show(){
-		if(!hidden)
-			return;
 		XMapWindow(wm.displayHandle, windowHandle);
-		onShow;
-		resized(size);
 	}
-	
+
 	override void onShow(){
 		hidden = false;
+		resized(size);
 	}
-	
+
 	void close(){
 		if(!isActive)
 			return;
 		hidden = true;
 		isActive = false;
+		wm.windows.remove(this);
 		XDestroyWindow(wm.displayHandle, windowHandle);
 	}
 
 	override void hide(){
-		if(hidden)
-			return;
 		XUnmapWindow(wm.displayHandle, windowHandle);
-		onHide;
-		//wm.windows.remove(this);
 	}
-	
+
 	override void onHide(){
 		hidden = true;
 	}
@@ -207,11 +201,11 @@ class X11Window: Base {
 
 
 	override void setCursor(Mouse.cursor cursor){
-		struct cursorCacheEntry {
+		struct Cache {
 			uint shape;
-			int cached;
+			ulong cached;
 		}
-		__gshared cursorCacheEntry[] cursorCache = [
+		static Cache[] cache = [
 			{XC_arrow, 0},
 			{XC_top_left_arrow, 0},
 			{XC_xterm, 0},
@@ -224,13 +218,11 @@ class X11Window: Base {
 			{XC_bottom_left_corner, 0},
 			{XC_hand1, 0},
 		];
-		int c = 0;
-		if((cast(int)cursor >= 0) && (cast(int)cursor < cursorCache.sizeof / cursorCache[0].sizeof)){
-			cursorCacheEntry *entry = &cursorCache[cast(int)cursor];
-			if(entry.cached == 0){
-				entry.cached = cast(int)XCreateFontCursor(wm.displayHandle, entry.shape);
-			}
-			c = entry.cached;
+		ulong c = 0;
+		if(cursor >= 0 && cursor <= cache.length){
+			if(!cache[cursor].cached)
+				cache[cursor].cached = XCreateFontCursor(wm.displayHandle, cache[cursor].shape);
+			c = cache[cursor].cached;
 		}else{
 			switch(cursor){
 				case Mouse.cursor.none:
@@ -290,6 +282,7 @@ class X11Window: Base {
 		char* c = cast(char*)title.toStringz;
 		XStringListToTextProperty(&c, 1, &tp);
 		XSetWMName(wm.displayHandle, windowHandle, &tp);
+		XSetTextProperty(wm.displayHandle, windowHandle, &tp, Atoms._NET_WM_NAME);
 	}
 
 
@@ -329,7 +322,7 @@ class X11Window: Base {
 		}
 		return text;
 	}
-	
+
 	GraphicsContext gcShare(){
 		return glXCreateContext(wm.displayHandle, cast(derelictX.XVisualInfo*)wm.graphicsInfo, cast(__GLXcontextRec*)graphicsContext, True);
 	}
@@ -340,7 +333,7 @@ class X11Window: Base {
 	}
 
 	void onPaste(string){}
-	
+
 	void processEvent(Event* e){
 		switch(e.type){
 			case ConfigureNotify:
@@ -473,5 +466,3 @@ import std.math;
 int distance(int a, int b){
 	return abs(a-b);
 }
-
-

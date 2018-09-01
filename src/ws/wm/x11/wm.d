@@ -4,6 +4,9 @@ version(Posix):
 
 import
 	std.stdio,
+	std.traits,
+	std.meta,
+	std.algorithm,
 	derelict.opengl3.gl,
 	ws.wm,
 	ws.wm.baseWindowManager,
@@ -16,19 +19,59 @@ import
 __gshared:
 
 
-struct EventMaskMapping {
-	int mask;
-	int type;
+
+private struct Mapping(int m, int t, T, string fn){
+	enum mask = m;
+	enum type = t;
+	alias Event = T;
+	enum attribute = fn;
 }
 
-enum eventMaskMap = [
-	EventMaskMapping(ExposureMask, Expose),
-	EventMaskMapping(EnterWindowMask, EnterNotify),
-	EventMaskMapping(LeaveWindowMask, LeaveNotify),
-	EventMaskMapping(ButtonPressMask, ButtonPress),
-	EventMaskMapping(ButtonReleaseMask, ButtonRelease),
-	EventMaskMapping(PointerMotionMask, MotionNotify)
-];
+
+alias EventMap = AliasSeq!(
+	Mapping!(ButtonPressMask, 			ButtonPress, 		XButtonPressedEvent,		"xbutton"),
+	Mapping!(ButtonReleaseMask,			ButtonRelease, 		XButtonReleasedEvent,		"xbutton"),
+	Mapping!(ColormapChangeMask, 		ColormapNotify, 	XColormapEvent,				"xcolormap"),
+	Mapping!(EnterWindowMask, 			EnterNotify, 		XEnterWindowEvent,			"xcrossing"),
+	Mapping!(LeaveWindowMask, 			LeaveNotify, 		XLeaveWindowEvent,			"xcrossing"),
+	Mapping!(ExposureMask,				Expose, 			XExposeEvent,				"xexpose"),
+	Mapping!(GCGraphicsExposures, 		GraphicsExpose, 	XGraphicsExposeEvent,		"xgraphicsexpose"),
+	Mapping!(GCGraphicsExposures,		NoExpose, 			XNoExposeEvent,				"xnoexpose"),
+	Mapping!(FocusChangeMask, 			FocusIn, 			XFocusInEvent,				"xfocus"),
+	Mapping!(FocusChangeMask,			FocusOut, 			XFocusOutEvent,				"xfocus"),
+	Mapping!(KeymapStateMask, 			KeymapNotify, 		XKeymapEvent,				"xkeymap"),
+	Mapping!(KeyPressMask, 				KeyPress, 			XKeyPressedEvent,			"xkey"),
+	Mapping!(KeyReleaseMask, 			KeyRelease, 		XKeyReleasedEvent,			"xkey"),
+	Mapping!(PointerMotionMask, 		MotionNotify, 		XPointerMovedEvent,			"xmotion"),
+	Mapping!(PropertyChangeMask, 		PropertyNotify, 	XPropertyEvent,				"xproperty"),
+	Mapping!(ResizeRedirectMask, 		ResizeRequest, 		XResizeRequestEvent,		"xresizerequest"),
+	Mapping!(StructureNotifyMask, 		CirculateNotify, 	XCirculateEvent,			"xcirculate"),
+	Mapping!(StructureNotifyMask,		ConfigureNotify, 	XConfigureEvent,			"xconfigure"),
+	Mapping!(StructureNotifyMask,		DestroyNotify, 		XDestroyWindowEvent,		"xdestroywindow"),
+	Mapping!(StructureNotifyMask,		GravityNotify, 		XGravityEvent,				"xgravity"),
+	Mapping!(StructureNotifyMask,		MapNotify, 			XMapEvent,					"xmap"),
+	Mapping!(StructureNotifyMask,		ReparentNotify, 	XReparentEvent,				"xreparent"),
+	Mapping!(StructureNotifyMask,		UnmapNotify, 		XUnmapEvent,				"xunmap"),
+
+	Mapping!(SubstructureNotifyMask, 	CirculateNotify, 	XCirculateEvent,			"xcirculate"),
+	Mapping!(SubstructureNotifyMask,	ConfigureNotify, 	XConfigureEvent,            "xconfigure"),
+	Mapping!(SubstructureNotifyMask,	CreateNotify, 		XCreateWindowEvent,         "xcreatewindow"),
+	Mapping!(SubstructureNotifyMask,	GravityNotify, 		XGravityEvent,              "xgravity"),
+	Mapping!(SubstructureNotifyMask,	MapNotify, 			XMapEvent,                  "xmap"),
+	Mapping!(SubstructureNotifyMask,	ReparentNotify, 	XReparentEvent,             "xreparent"),
+	Mapping!(SubstructureNotifyMask,	UnmapNotify, 		XUnmapEvent,                "xunmap"),
+	Mapping!(SubstructureRedirectMask, 	CirculateRequest, 	XCirculateRequestEvent,     "xcirculaterequest"),
+	Mapping!(SubstructureRedirectMask,	ConfigureRequest, 	XConfigureRequestEvent,     "xconfigurerequest"),
+	Mapping!(SubstructureRedirectMask,	MapRequest, 		XMapRequestEvent,           "xmaprequest"),
+
+	Mapping!(None, 						ClientMessage, 		XClientMessageEvent,		"xclient"),
+	Mapping!(None, 						MappingNotify, 		XMappingEvent,				"xmapping"),
+	Mapping!(None, 						SelectionClear, 	XSelectionClearEvent,		"xselectionclear"),
+	Mapping!(None, 						SelectionNotify, 	XSelectionEvent,			"xselection"),
+	Mapping!(None, 						SelectionRequest, 	XSelectionRequestEvent,		"xselectionrequest"),
+	Mapping!(VisibilityChangeMask, 		VisibilityNotify, 	XVisibilityEvent,			"xvisibility")
+);
+
 
 class X11WindowManager: BaseWindowManager {
 
@@ -38,40 +81,70 @@ class X11WindowManager: BaseWindowManager {
 		DerelictGL3.load();
 		displayHandle = XOpenDisplay(null);
 		glCore = true;
-		//load!("glXCreateContextAttribsARB");
+		glXCreateContextAttribsARB = cast(T_glXCreateContextAttribsARB)
+                glXGetProcAddress("glXCreateContextAttribsARB");
 		if(!glXCreateContextAttribsARB)
 			glCore = false;
-		/*if(glCore){
-			// Initialize
-			int configCount = 0;
-			int fbAttribs[] = [
-				GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
-				GLX_X_RENDERABLE, True,
-				GLX_RENDER_TYPE, GLX_RGBA_BIT,
-				GLX_RED_SIZE, 8,
-				GLX_BLUE_SIZE, 8,
-				GLX_GREEN_SIZE, 8,
-				GLX_DEPTH_SIZE, 16,
-				GLX_STENCIL_SIZE, 8,
-				GLX_DOUBLEBUFFER, True,
-				GLX_SAMPLE_BUFFERS, True,
-				GLX_SAMPLES, 2,
-				0
-			];
-			GLXFBConfig* mFBConfig = glXChooseFBConfig(displayHandle, DefaultScreen(*displayHandle), fbAttribs.ptr, &configCount);
-			if(!configCount)
-				throw new Exception("osWindow Initialisation: Failed to get frame buffer configuration. Are your drivers up to date?");
-			graphicsInfo = cast(XVisualInfo*)glXGetVisualFromFBConfig(displayHandle, mFBConfig[0]);
-		}else{*/{
+        glCore = false;
+		if(glCore){
 
-			if(true){
-				GLint[] att = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_ALPHA_SIZE, 8, GLX_DOUBLEBUFFER, 0];
-				graphicsInfo = cast(XVisualInfo*)glXChooseVisual(displayHandle, 0, att.ptr);
-			}else{
-				graphicsInfo = new XVisualInfo;
-				if(!XMatchVisualInfo(displayHandle, DefaultScreen(displayHandle), 32, TrueColor, graphicsInfo))
-					writeln("XMatchVisualInfo failed");
-			}
+            if(!glCore)
+                throw new Exception("disabled");
+            int[] attribs = [
+                GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
+                GLX_CONTEXT_MINOR_VERSION_ARB, 3,
+                0
+            ];
+
+            auto getFramebufferConfigs = (int[int] attributes){
+                int[] attribs;
+                foreach(key, value; attributes){
+                    attribs ~= [key, value];
+                }
+                attribs ~= 0;
+
+                int configCount;
+                GLXFBConfig* mFBConfig = glXChooseFBConfig(displayHandle, DefaultScreen(displayHandle),
+                                                           attribs.ptr, &configCount);
+                auto result = mFBConfig[0..configCount].dup;
+                XFree(mFBConfig);
+                return result;
+            };
+
+            auto fbAttribs = [
+                GLX_DRAWABLE_TYPE: GLX_WINDOW_BIT,
+                GLX_X_RENDERABLE: True,
+                GLX_RENDER_TYPE: GLX_RGBA_BIT,
+                GLX_DEPTH_SIZE: 24,
+                GLX_ALPHA_SIZE: 8,
+				GLX_RED_SIZE: 8,
+				GLX_BLUE_SIZE: 8,
+				GLX_GREEN_SIZE: 8,
+				GLX_DEPTH_SIZE: 16,
+				GLX_STENCIL_SIZE: 8,
+				GLX_DOUBLEBUFFER: True,
+				GLX_SAMPLE_BUFFERS: True,
+				GLX_SAMPLES: 2,
+            ];
+
+            auto fbConfigs = getFramebufferConfigs(fbAttribs);
+
+            if(!fbConfigs.length)
+                throw new Exception("could not get FB config");
+            graphicsInfo = cast(XVisualInfo*)glXGetVisualFromFBConfig(displayHandle, fbConfigs[0]);
+
+            /+
+            handle = glXCreateContextAttribsARB(
+                    displayHandle, fbConfigs[0], null, cast(int)True, attribs.ptr
+            );
+            if(!handle)
+                throw new Exception("glXCreateContextAttribsARB failed");
+            +/
+
+		}else{
+			graphicsInfo = new XVisualInfo;
+			if(!XMatchVisualInfo(displayHandle, DefaultScreen(displayHandle), 32, TrueColor, graphicsInfo))
+				writeln("XMatchVisualInfo failed");
 			if(!graphicsInfo)
 				writeln("glXChooseVisual failed");
 		}
@@ -92,16 +165,33 @@ class X11WindowManager: BaseWindowManager {
 		}
 	}
 
-	void on(x11.X.Window window, void delegate(XEvent*)[int] handlers){
+	void on()(x11.X.Window window, void delegate(XEvent*)[int] handlers){
 		int mask;
 		foreach(ev, dg; handlers){
-			foreach(mapping; eventMaskMap){
+			foreach(mapping; EventMap){
 				if(mapping.type == ev)
 					mask |= mapping.mask;
 			}
 			handler[window][ev] ~= dg;
 		}
 		//XSelectInput(displayHandle, window, mask);
+	}
+
+	void on(Args...)(x11.X.Window window, Args args) if(allSatisfy!(isCallable, args)) {
+		int mask;
+		foreach(dg; args){
+			bool found;
+			foreach(mapping; EventMap){
+				static if(is(mapping.Event* == Parameters!dg[0])){
+					mask |= mapping.mask;
+					if(!found){
+						found = true;
+						handler[window][mapping.type] ~= (XEvent* e) => mixin("dg(&e." ~ mapping.attribute ~ ")");
+					}
+				}
+			}
+		}
+		XSelectInput(displayHandle, window, mask);
 	}
 
 	~this(){
@@ -114,8 +204,8 @@ class X11WindowManager: BaseWindowManager {
 
 	void processEvents(){
 		XEvent e;
-		while(XPending(wm.displayHandle)){
-			XNextEvent(wm.displayHandle, &e);
+		while(XPending(displayHandle)){
+			XNextEvent(displayHandle, &e);
 			foreach(win; wm.windows){
 				if(e.xany.window == win.windowHandle){
 					activeWindow = win;
@@ -131,7 +221,7 @@ class X11WindowManager: BaseWindowManager {
 					foreach(handlerWindowType; handlerWindow[e.type])
 						handlerWindowType(&e);
 			}
-			
+
 		}
 	}
 
