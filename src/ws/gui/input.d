@@ -79,7 +79,7 @@ static class Mouse {
 
 static class Keyboard {
 	
-	alias ushort key;
+	alias ulong key;
 	
 	version(Windows){
 		enum: key {
@@ -150,7 +150,7 @@ static class Keyboard {
 	}
 
 	protected {
-		static bool[key.max] chars = [false];
+		static bool[key] chars;
 	}
 	
 }
