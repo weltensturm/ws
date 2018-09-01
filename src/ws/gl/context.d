@@ -19,7 +19,7 @@ version(Windows){
 
 
     __gshared class GlContext {
-        
+
         GraphicsContext handle;
         __gshared GraphicsContext sharedHandle;
         WindowHandle window;
@@ -131,19 +131,30 @@ version(Posix){
     import ws.wm.x11.api;
     import derelictX = derelict.util.xtypes;
 
+    import derelict.opengl3.glx;
+
     private static GraphicsContext current;
 
+    T_glXCreateContextAttribsARB glXCreateContextAttribsARB;
 
     class GlContext {
-        
+
         GraphicsContext handle;
         WindowHandle window;
+        Display* display;
 
-        this(WindowHandle window){
+        this(Display* display, WindowHandle window){
             this.window = window;
-            GLint[] att = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_ALPHA_SIZE, 8, GLX_DOUBLEBUFFER, 0];
-            auto graphicsInfo = cast(XVisualInfo*)glXChooseVisual(wm.displayHandle, 0, att.ptr);
+            this.display = display;
+            XVisualInfo* graphicsInfo;
             try {
+
+        		wm.glCore = true;
+        		glXCreateContextAttribsARB = cast(T_glXCreateContextAttribsARB)
+                        glXGetProcAddress("glXCreateContextAttribsARB");
+        		if(!glXCreateContextAttribsARB)
+        			wm.glCore = false;
+
                 if(!wm.glCore)
                     throw new Exception("disabled");
                 int[] attribs = [
@@ -151,35 +162,77 @@ version(Posix){
                     GLX_CONTEXT_MINOR_VERSION_ARB, 3,
                     0
                 ];
-                handle = wm.glXCreateContextAttribsARB(
-                        wm.displayHandle, wm.mFBConfig[0], null, cast(int)True, attribs.ptr
+
+                auto getFramebufferConfigs = (int[int] attributes){
+                    int[] attribs;
+                    foreach(key, value; attributes){
+                        attribs ~= [key, value];
+                    }
+                    attribs ~= 0;
+
+                    int configCount;
+                    GLXFBConfig* mFBConfig = glXChooseFBConfig(display, DefaultScreen(display),
+                                                               attribs.ptr, &configCount);
+                    auto result = mFBConfig[0..configCount].dup;
+                    XFree(mFBConfig);
+                    return result;
+                };
+
+                auto fbAttribs = [
+                    GLX_DRAWABLE_TYPE: GLX_WINDOW_BIT,
+                    GLX_X_RENDERABLE: True,
+                    GLX_RENDER_TYPE: GLX_RGBA_BIT,
+                    GLX_DEPTH_SIZE: 24,
+                    GLX_ALPHA_SIZE: 8,
+                    /+
+                    GLX_DEPTH_SIZE: 16,
+                    GLX_STENCIL_SIZE: 8,
+                    GLX_DOUBLEBUFFER: True,
+                    GLX_SAMPLE_BUFFERS: True,
+                    GLX_SAMPLES: 2,
+                    +/
+                ];
+
+                auto fbConfigs = getFramebufferConfigs(fbAttribs);
+
+                if(!fbConfigs.length)
+                    throw new Exception("could not get FB config");
+                graphicsInfo = cast(XVisualInfo*)glXGetVisualFromFBConfig(display, fbConfigs[0]);
+
+                handle = glXCreateContextAttribsARB(
+                        display, fbConfigs[0], null, cast(int)True, attribs.ptr
                 );
                 if(!handle)
                     throw new Exception("glXCreateContextAttribsARB failed");
+
+                debug(glContextInfo){
+                    import std.stdio;
+                    writeln(graphicsInfo.depth);
+                }
+
             }catch(Exception e){
-                /+wm.glCore = false;
-                GLint att[] = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, 0];
-                wm.graphicsInfo = glXChooseVisual(wm.displayHandle, 0, att.ptr);
-                handle = glXCreateContext(wm.displayHandle, wm.graphicsInfo, null, True);+/
-                
-                handle = glXCreateContext(wm.displayHandle, cast(derelictX.XVisualInfo*)wm.graphicsInfo, null, True);
+                GLint[] att = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_ALPHA_SIZE, 8, GLX_DOUBLEBUFFER, 0];
+                graphicsInfo = cast(XVisualInfo*)glXChooseVisual(display, 0, att.ptr);
+                handle = glXCreateContext(display, cast(derelictX.XVisualInfo*)graphicsInfo, null, True);
                 if(!handle)
                     throw new Exception("glXCreateContext failed");
             }
-            glXMakeCurrent(wm.displayHandle, cast(uint)window, cast(__GLXcontextRec*)handle);
+            glXMakeCurrent(display, cast(uint)window, cast(__GLXcontextRec*)handle);
+            current = handle;
             DerelictGL3.reload();
+
         }
 
         void swapBuffers(){
             version(Posix){
-                glXSwapBuffers(wm.displayHandle, cast(uint)window);
+                glXSwapBuffers(display, cast(uint)window);
             }
         }
 
         template opDispatch(string s){
             auto opDispatch(Args...)(Args args){
                 if(current != handle){
-                    glXMakeCurrent(wm.displayHandle, cast(uint)window, cast(__GLXcontextRec*)handle);
+                    glXMakeCurrent(display, cast(uint)window, cast(__GLXcontextRec*)handle);
                     current = handle;
                 }
                 assert(glXGetCurrentContext() == cast(__GLXcontextRec*)handle);
@@ -200,4 +253,3 @@ version(Posix){
     }
 
 }
-

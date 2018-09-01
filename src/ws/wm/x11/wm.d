@@ -81,40 +81,70 @@ class X11WindowManager: BaseWindowManager {
 		DerelictGL3.load();
 		displayHandle = XOpenDisplay(null);
 		glCore = true;
-		//load!("glXCreateContextAttribsARB");
+		glXCreateContextAttribsARB = cast(T_glXCreateContextAttribsARB)
+                glXGetProcAddress("glXCreateContextAttribsARB");
 		if(!glXCreateContextAttribsARB)
 			glCore = false;
-		/*if(glCore){
-			// Initialize
-			int configCount = 0;
-			int fbAttribs[] = [
-				GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
-				GLX_X_RENDERABLE, True,
-				GLX_RENDER_TYPE, GLX_RGBA_BIT,
-				GLX_RED_SIZE, 8,
-				GLX_BLUE_SIZE, 8,
-				GLX_GREEN_SIZE, 8,
-				GLX_DEPTH_SIZE, 16,
-				GLX_STENCIL_SIZE, 8,
-				GLX_DOUBLEBUFFER, True,
-				GLX_SAMPLE_BUFFERS, True,
-				GLX_SAMPLES, 2,
-				0
-			];
-			GLXFBConfig* mFBConfig = glXChooseFBConfig(displayHandle, DefaultScreen(*displayHandle), fbAttribs.ptr, &configCount);
-			if(!configCount)
-				throw new Exception("osWindow Initialisation: Failed to get frame buffer configuration. Are your drivers up to date?");
-			graphicsInfo = cast(XVisualInfo*)glXGetVisualFromFBConfig(displayHandle, mFBConfig[0]);
-		}else{*/{
+        glCore = false;
+		if(glCore){
 
-			if(false){
-				GLint[] att = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_ALPHA_SIZE, 8, GLX_DOUBLEBUFFER, 0];
-				graphicsInfo = cast(XVisualInfo*)glXChooseVisual(displayHandle, 0, att.ptr);
-			}else{
-				graphicsInfo = new XVisualInfo;
-				if(!XMatchVisualInfo(displayHandle, DefaultScreen(displayHandle), 32, TrueColor, graphicsInfo))
-					writeln("XMatchVisualInfo failed");
-			}
+            if(!glCore)
+                throw new Exception("disabled");
+            int[] attribs = [
+                GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
+                GLX_CONTEXT_MINOR_VERSION_ARB, 3,
+                0
+            ];
+
+            auto getFramebufferConfigs = (int[int] attributes){
+                int[] attribs;
+                foreach(key, value; attributes){
+                    attribs ~= [key, value];
+                }
+                attribs ~= 0;
+
+                int configCount;
+                GLXFBConfig* mFBConfig = glXChooseFBConfig(displayHandle, DefaultScreen(displayHandle),
+                                                           attribs.ptr, &configCount);
+                auto result = mFBConfig[0..configCount].dup;
+                XFree(mFBConfig);
+                return result;
+            };
+
+            auto fbAttribs = [
+                GLX_DRAWABLE_TYPE: GLX_WINDOW_BIT,
+                GLX_X_RENDERABLE: True,
+                GLX_RENDER_TYPE: GLX_RGBA_BIT,
+                GLX_DEPTH_SIZE: 24,
+                GLX_ALPHA_SIZE: 8,
+				GLX_RED_SIZE: 8,
+				GLX_BLUE_SIZE: 8,
+				GLX_GREEN_SIZE: 8,
+				GLX_DEPTH_SIZE: 16,
+				GLX_STENCIL_SIZE: 8,
+				GLX_DOUBLEBUFFER: True,
+				GLX_SAMPLE_BUFFERS: True,
+				GLX_SAMPLES: 2,
+            ];
+
+            auto fbConfigs = getFramebufferConfigs(fbAttribs);
+
+            if(!fbConfigs.length)
+                throw new Exception("could not get FB config");
+            graphicsInfo = cast(XVisualInfo*)glXGetVisualFromFBConfig(displayHandle, fbConfigs[0]);
+
+            /+
+            handle = glXCreateContextAttribsARB(
+                    displayHandle, fbConfigs[0], null, cast(int)True, attribs.ptr
+            );
+            if(!handle)
+                throw new Exception("glXCreateContextAttribsARB failed");
+            +/
+
+		}else{
+			graphicsInfo = new XVisualInfo;
+			if(!XMatchVisualInfo(displayHandle, DefaultScreen(displayHandle), 32, TrueColor, graphicsInfo))
+				writeln("XMatchVisualInfo failed");
 			if(!graphicsInfo)
 				writeln("glXChooseVisual failed");
 		}
@@ -174,8 +204,8 @@ class X11WindowManager: BaseWindowManager {
 
 	void processEvents(){
 		XEvent e;
-		while(XPending(wm.displayHandle)){
-			XNextEvent(wm.displayHandle, &e);
+		while(XPending(displayHandle)){
+			XNextEvent(displayHandle, &e);
 			foreach(win; wm.windows){
 				if(e.xany.window == win.windowHandle){
 					activeWindow = win;

@@ -201,11 +201,11 @@ class X11Window: Base {
 
 
 	override void setCursor(Mouse.cursor cursor){
-		struct cursorCacheEntry {
+		struct Cache {
 			uint shape;
-			int cached;
+			ulong cached;
 		}
-		__gshared cursorCacheEntry[] cursorCache = [
+		static Cache[] cache = [
 			{XC_arrow, 0},
 			{XC_top_left_arrow, 0},
 			{XC_xterm, 0},
@@ -282,6 +282,7 @@ class X11Window: Base {
 		char* c = cast(char*)title.toStringz;
 		XStringListToTextProperty(&c, 1, &tp);
 		XSetWMName(wm.displayHandle, windowHandle, &tp);
+		XSetTextProperty(wm.displayHandle, windowHandle, &tp, Atoms._NET_WM_NAME);
 	}
 
 

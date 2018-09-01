@@ -12,7 +12,7 @@ public import
 extern(C){
 
 	alias void* GLXContext;
-	alias void* GLXFBConfig;
+	//alias void* GLXFBConfig;
 
 	alias GLXContext function(Display*, GLXFBConfig, GLXContext, Bool, const int*) T_glXCreateContextAttribsARB;
 

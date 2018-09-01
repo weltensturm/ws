@@ -60,7 +60,7 @@ class GlDraw: DrawEmpty {
         );
         shaderText = new Shader(
                 context,
-                "2d_texture",
+                "2d_text",
                 [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"],
                 null,
                 TextureShader.vertex,
@@ -118,8 +118,6 @@ class GlDraw: DrawEmpty {
         line(pos.a + [size.w,0], pos.a + size);
     }
 
-    Random rnd;
-
     override void clip(int[2] pos, int[2] size){
         if(clipStack.length){
             auto clipPos = clipStack[$-1][0..2].to!(int[2]);
@@ -128,8 +126,6 @@ class GlDraw: DrawEmpty {
             size = [size.w.min(clipSize.w - (pos.x-clipPos.x)), size.h.min(clipSize.h - (pos.y-clipPos.y))];
         }
         clipStack ~= [pos.x, pos.y, size.w, size.h];
-        //setColor([uniform(0,256,rnd)/256.0f, uniform(0,256,rnd)/256.0f, uniform(0,256,rnd)/256.0f, 0.2]);
-        //rect([0,0], [screen.w.to!int, screen.h.to!int]);
     }
 
     override void noclip(){
@@ -174,6 +170,8 @@ class GlDraw: DrawEmpty {
     override int text(int[2] pos, string text, double offset=-0.2){
         if(!font)
             exception("no font active");
+        context.enable(GL_BLEND);
+        //context.blendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
         context.blendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR);
         auto offsetRight = max(0.0,-offset)*fontHeight;
         auto offsetLeft = max(0.0,offset-1)*fontHeight;
@@ -215,7 +213,6 @@ class GlDraw: DrawEmpty {
     }
 
     override void finishFrame(){
-        rnd = Random(0);
         context.swapBuffers;
     }
 
@@ -264,6 +261,58 @@ class GlDraw: DrawEmpty {
         Shader shaderText;
 
 }
+
+
+enum TextShader {
+    vertex = "
+        #version 130
+
+        in vec4 vVertex;
+        in vec2 vTexture0;
+
+        uniform vec3 Screen;
+        uniform vec3 Offset;
+        uniform vec3 Scale;
+
+        smooth out vec2 vVaryingTexCoord;
+
+        void main(void){
+            vVaryingTexCoord = vTexture0.st;
+            vec4 t = vVertex;
+            t.x = (vVertex.x*Scale.x + Offset.x) / Screen.x * 2 - 1;
+            t.y = (vVertex.y*Scale.y + Offset.y) / Screen.y * 2 - 1;
+            gl_Position = t;
+        }
+    ",
+    fragment = "
+        #version 130
+
+        uniform sampler2D Image;
+        uniform vec4 Color;
+        uniform vec4 Clip;
+        uniform vec3 Screen;
+        uniform vec3 Offset;
+        uniform vec3 Scale;
+
+        smooth in vec2 vVaryingTexCoord;
+
+        layout(location = 0, index = 0) out vec4 color;
+        layout(location = 0, index = 1) out vec4 colorMask;
+
+        void main(void){
+            vec2 screenPos = gl_FragCoord.xy;
+            if(gl_FragCoord.x < Clip.x || gl_FragCoord.y < Clip.y
+               || gl_FragCoord.x > Clip.x+Clip.z || gl_FragCoord.y > Clip.y+Clip.w)
+                discard;
+            vec4 pixel = texture(Image, vVaryingTexCoord);
+            if(pixel.r+pixel.g+pixel.b < 0.001)
+                discard;
+            color = Color;
+            colorMask = Color.a*pixel;
+        }
+    "
+}
+
 
 enum TextureShader {
     vertex = "
