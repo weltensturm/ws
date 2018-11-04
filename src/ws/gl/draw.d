@@ -63,8 +63,8 @@ class GlDraw: DrawEmpty {
                 "2d_text",
                 [gl.attributeVertex: "vVertex", gl.attributeTexture: "vTexture0"],
                 null,
-                TextureShader.vertex,
-                TextureShader.fragment
+                TextShader.vertex,
+                TextShader.fragment
         );
         fonts = new CachedFactory!Font;
     }
@@ -171,8 +171,7 @@ class GlDraw: DrawEmpty {
         if(!font)
             exception("no font active");
         context.enable(GL_BLEND);
-        //context.blendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
-        context.blendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR);
+        context.blendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
         auto offsetRight = max(0.0,-offset)*fontHeight;
         auto offsetLeft = max(0.0,offset-1)*fontHeight;
         float x = pos.x - min(1,max(0,offset))*width(text) + offsetRight - offsetLeft;
@@ -265,7 +264,7 @@ class GlDraw: DrawEmpty {
 
 enum TextShader {
     vertex = "
-        #version 130
+        #version 330
 
         in vec4 vVertex;
         in vec2 vTexture0;
@@ -285,7 +284,7 @@ enum TextShader {
         }
     ",
     fragment = "
-        #version 130
+        #version 330
 
         uniform sampler2D Image;
         uniform vec4 Color;

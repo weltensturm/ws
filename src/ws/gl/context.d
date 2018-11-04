@@ -13,10 +13,37 @@ import
 
 version(Windows){
 
+
+    string getLastError(){
+        DWORD errcode = GetLastError();
+        if(!errcode)
+            return "No error";
+        LPCSTR msgBuf;
+        DWORD i = FormatMessageA(
+            cast(uint)(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER |
+            FORMAT_MESSAGE_FROM_SYSTEM |
+            FORMAT_MESSAGE_IGNORE_INSERTS),
+            null,
+            errcode,
+            cast(uint)MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+            cast(LPSTR)&msgBuf,
+            0,
+            null
+        );
+        string text = to!string(msgBuf);
+        LocalFree(cast(HLOCAL)msgBuf);
+        return text;
+    }
+
+
     import ws.wm.win32.api;
 
     private static GraphicsContext current;
 
+    auto chooseBestPixelFormat(){
+        
+    }
 
     __gshared class GlContext {
 
@@ -64,24 +91,41 @@ version(Windows){
                 ];
                 wm.wglChoosePixelFormatARB(deviceContext, iAttribList.ptr, null, 1, &pixelFormat, &formatCount);
                 if(!formatCount)
-                    throw new Exception("wglChoosePixelFormatARB failed: %s".format(glGetError()));
+                    throw new Exception("wglChoosePixelFormatARB failed: %s".format(getLastError()));
                 SetPixelFormat(deviceContext, pixelFormat, null);
+            }catch(Exception e){
+                ubyte depth = 32;
+                ubyte color = 24;
+                ubyte stencil = 8;
+                PIXELFORMATDESCRIPTOR descriptor;
+                descriptor.nSize        = descriptor.sizeof;
+                descriptor.nVersion     = 1;
+                descriptor.iLayerType   = PFD_MAIN_PLANE;
+                descriptor.dwFlags      = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+                descriptor.iPixelType   = PFD_TYPE_RGBA;
+                descriptor.cColorBits   = depth;
+                descriptor.cDepthBits   = color;
+                descriptor.cStencilBits = stencil;
+                descriptor.cAlphaBits   = depth == 32 ? 8 : 0;
+                auto pixelFormat = ChoosePixelFormat(deviceContext, &descriptor);
+                SetPixelFormat(deviceContext, pixelFormat, &descriptor);
+            }
+
+            try {
+                enum WGL_CONTEXT_MAJOR_VERSION_ARB = 0x2091;
+                enum WGL_CONTEXT_MINOR_VERSION_ARB = 0x2092;
+                enum WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB = 0x00000002;
                 int[] attribs = [
-                    0x2091, 3,
-                    0x2092, 2,
-                    0x9126, 0x00000001,
-                    0
+                    WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+                    WGL_CONTEXT_MINOR_VERSION_ARB, 3,
+                    //WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB, 1,
+                    0, 0
                 ];
                 handle = wm.wglCreateContextAttribsARB(deviceContext, null, attribs.ptr);
                 if(!handle)
-                    throw new Exception("wglCreateContextAttribsARB() failed: %s".format(glGetError()));
+                    throw new Exception("wglCreateContextAttribsARB() failed: %s".format(getLastError()));
             }catch(Exception e){
-                PIXELFORMATDESCRIPTOR pfd = {
-                    (PIXELFORMATDESCRIPTOR).sizeof, 1, 4 | 32 | 1, 0, 8, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 0, 0, 0, 0, 0, 0
-                };
-                int pixelFormat = ChoosePixelFormat(deviceContext, &pfd);
-                SetPixelFormat(deviceContext, pixelFormat, &pfd);
+                import std.stdio; writeln(e);
                 handle = core.sys.windows.wingdi.wglCreateContext(deviceContext);
             }
             this.sharedHandle = handle;
@@ -143,6 +187,10 @@ version(Posix){
         WindowHandle window;
         Display* display;
 
+        this(WindowHandle window){
+            this(wm.displayHandle, window);
+        }
+
         this(Display* display, WindowHandle window){
             this.window = window;
             this.display = display;
@@ -151,56 +199,51 @@ version(Posix){
 
         		wm.glCore = true;
         		glXCreateContextAttribsARB = cast(T_glXCreateContextAttribsARB)
-                        glXGetProcAddress("glXCreateContextAttribsARB");
+                                             glXGetProcAddress("glXCreateContextAttribsARB");
         		if(!glXCreateContextAttribsARB)
         			wm.glCore = false;
 
                 if(!wm.glCore)
                     throw new Exception("disabled");
+                
+                XWindowAttributes wa;
+                assert(XGetWindowAttributes(display, window, &wa));
+
+                XVisualInfo visual;
+                visual.screen   = DefaultScreen(display);
+                visual.visualid = XVisualIDFromVisual(wa.visual);
+                int visualCount = 0;
+                graphicsInfo = XGetVisualInfo(display, VisualIDMask | VisualScreenMask, &visual, &visualCount);
+                
+                size_t config = size_t.max;
+
+                int nbConfigs = 0;
+                GLXFBConfig* configs = glXChooseFBConfig(display, DefaultScreen(display), null, &nbConfigs);
+
+                foreach(i, fbc; configs[0..nbConfigs]){
+                    auto vis = cast(XVisualInfo*)glXGetVisualFromFBConfig(display, fbc);
+                    scope(exit)
+                        XFree(vis);
+                    if(vis.visualid == visual.visualid){
+                        config = i;
+                        break;
+                    }
+                }
+
+                import std.stdio;
+                writeln(*graphicsInfo);
+
+                if(config == size_t.max)
+                    throw new Exception("Failed to get FB config");
+
                 int[] attribs = [
                     GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
                     GLX_CONTEXT_MINOR_VERSION_ARB, 3,
                     0
                 ];
 
-                auto getFramebufferConfigs = (int[int] attributes){
-                    int[] attribs;
-                    foreach(key, value; attributes){
-                        attribs ~= [key, value];
-                    }
-                    attribs ~= 0;
-
-                    int configCount;
-                    GLXFBConfig* mFBConfig = glXChooseFBConfig(display, DefaultScreen(display),
-                                                               attribs.ptr, &configCount);
-                    auto result = mFBConfig[0..configCount].dup;
-                    XFree(mFBConfig);
-                    return result;
-                };
-
-                auto fbAttribs = [
-                    GLX_DRAWABLE_TYPE: GLX_WINDOW_BIT,
-                    GLX_X_RENDERABLE: True,
-                    GLX_RENDER_TYPE: GLX_RGBA_BIT,
-                    GLX_DEPTH_SIZE: 24,
-                    GLX_ALPHA_SIZE: 8,
-                    /+
-                    GLX_DEPTH_SIZE: 16,
-                    GLX_STENCIL_SIZE: 8,
-                    GLX_DOUBLEBUFFER: True,
-                    GLX_SAMPLE_BUFFERS: True,
-                    GLX_SAMPLES: 2,
-                    +/
-                ];
-
-                auto fbConfigs = getFramebufferConfigs(fbAttribs);
-
-                if(!fbConfigs.length)
-                    throw new Exception("could not get FB config");
-                graphicsInfo = cast(XVisualInfo*)glXGetVisualFromFBConfig(display, fbConfigs[0]);
-
                 handle = glXCreateContextAttribsARB(
-                        display, fbConfigs[0], null, cast(int)True, attribs.ptr
+                        display, configs[config], null, cast(int)True, attribs.ptr
                 );
                 if(!handle)
                     throw new Exception("glXCreateContextAttribsARB failed");
@@ -211,6 +254,8 @@ version(Posix){
                 }
 
             }catch(Exception e){
+                import std.stdio;
+                writeln(e);
                 GLint[] att = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_ALPHA_SIZE, 8, GLX_DOUBLEBUFFER, 0];
                 graphicsInfo = cast(XVisualInfo*)glXChooseVisual(display, 0, att.ptr);
                 handle = glXCreateContext(display, cast(derelictX.XVisualInfo*)graphicsInfo, null, True);
@@ -224,14 +269,16 @@ version(Posix){
         }
 
         void swapBuffers(){
-            version(Posix){
-                glXSwapBuffers(display, cast(uint)window);
-            }
+            glXSwapBuffers(display, cast(uint)window);
         }
 
         template opDispatch(string s){
             auto opDispatch(Args...)(Args args){
                 if(current != handle){
+                    debug(glContextSwitch){
+                        import std.stdio;
+                        writeln("CONTEXT SWITCH %s -> %s".format(current, handle));
+                    }
                     glXMakeCurrent(display, cast(uint)window, cast(__GLXcontextRec*)handle);
                     current = handle;
                 }

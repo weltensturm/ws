@@ -85,16 +85,8 @@ class X11WindowManager: BaseWindowManager {
                 glXGetProcAddress("glXCreateContextAttribsARB");
 		if(!glXCreateContextAttribsARB)
 			glCore = false;
-        glCore = false;
+        
 		if(glCore){
-
-            if(!glCore)
-                throw new Exception("disabled");
-            int[] attribs = [
-                GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
-                GLX_CONTEXT_MINOR_VERSION_ARB, 3,
-                0
-            ];
 
             auto getFramebufferConfigs = (int[int] attributes){
                 int[] attribs;
@@ -115,31 +107,34 @@ class X11WindowManager: BaseWindowManager {
                 GLX_DRAWABLE_TYPE: GLX_WINDOW_BIT,
                 GLX_X_RENDERABLE: True,
                 GLX_RENDER_TYPE: GLX_RGBA_BIT,
-                GLX_DEPTH_SIZE: 24,
                 GLX_ALPHA_SIZE: 8,
 				GLX_RED_SIZE: 8,
 				GLX_BLUE_SIZE: 8,
 				GLX_GREEN_SIZE: 8,
 				GLX_DEPTH_SIZE: 16,
-				GLX_STENCIL_SIZE: 8,
 				GLX_DOUBLEBUFFER: True,
+				/+
+				GLX_STENCIL_SIZE: 8,
 				GLX_SAMPLE_BUFFERS: True,
 				GLX_SAMPLES: 2,
+				+/
             ];
 
             auto fbConfigs = getFramebufferConfigs(fbAttribs);
 
             if(!fbConfigs.length)
-                throw new Exception("could not get FB config");
-            graphicsInfo = cast(XVisualInfo*)glXGetVisualFromFBConfig(displayHandle, fbConfigs[0]);
+                throw new Exception("No FB matches");
+			
+			foreach(config; fbConfigs){
+				auto info = cast(XVisualInfo*)glXGetVisualFromFBConfig(displayHandle, config);
+				if(info.depth == 32){
+					graphicsInfo = info;
+					break;
+				}
+			}
 
-            /+
-            handle = glXCreateContextAttribsARB(
-                    displayHandle, fbConfigs[0], null, cast(int)True, attribs.ptr
-            );
-            if(!handle)
-                throw new Exception("glXCreateContextAttribsARB failed");
-            +/
+			if(!graphicsInfo)
+				throw new Exception("Failed to find FB config");
 
 		}else{
 			graphicsInfo = new XVisualInfo;

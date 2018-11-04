@@ -173,7 +173,7 @@ protected:
 			case WM_SHOWWINDOW:
 					return { window.onShow; };
 			case WM_CLOSE:
-					return { window.hide; };
+					return { window.onDestroy; };
 			case WM_SIZE:
 				return {
 					window.resized([LOWORD(lpar),HIWORD(lpar)]);

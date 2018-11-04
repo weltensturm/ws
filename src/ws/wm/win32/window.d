@@ -44,11 +44,11 @@ class Win32Window: Base {
 	this(int w, int h, string t){
 		title = t;
 		size = [w, h];
-		RECT targetSize = {0, 0, size.x, size.y};
-		AdjustWindowRect(&targetSize, WS_OVERLAPPEDWINDOW | WS_VISIBLE, false);
+		RECT targetSize = {0, 0, size.w, size.h};
+		AdjustWindowRect(&targetSize, WS_OVERLAPPEDWINDOW, false);
 		windowHandle = CreateWindowExW(
 			0, wm.windowClass.lpszClassName, title.toUTF16z(),
-			WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
+			WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
 			targetSize.right-targetSize.left, targetSize.bottom-targetSize.top,
 			null, null, wm.getInstance, null
 		);
@@ -70,6 +70,8 @@ class Win32Window: Base {
 		if(GetFocus == windowHandle)
 			onKeyboardFocus(true);
 		
+		hidden = true;
+		show;
 	}
 
 	override DrawEmpty draw(){
@@ -103,13 +105,23 @@ class Win32Window: Base {
 	}
 
 	override void resize(int[2] size){
-		super.resize(size);
+		SetWindowPos(windowHandle, null, 0, 0, size.w, size.h, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+	}
+
+	void onDestroy(){
+		isActive = false;
+		draw.destroy;
+	}
+
+	override void onShow(){
+		hidden = false;
+		resized(size);
 	}
 
 	void resized(int[2] size){
+		this.size = size;
 		if(draw)
 			draw.resize(size);
-		this.size = size;
 	}
 
 	void setTitle(string title){

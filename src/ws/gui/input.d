@@ -2,6 +2,7 @@
 module ws.gui.input;
 
 import io = ws.io;
+import std.conv;
 
 version(linux)
 	import x11.keysymdef;
@@ -143,7 +144,7 @@ static class Keyboard {
 			ip.ki.wScan = 0;
 			ip.ki.time = 0;
 			ip.ki.dwExtraInfo = 0;
-			ip.ki.wVk = k;
+			ip.ki.wVk = k.to!ushort;
 			ip.ki.dwFlags = (p ? 0 : KEYEVENTF_KEYUP);
 			SendInput(1, &ip, INPUT.sizeof);
 		}

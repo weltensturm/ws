@@ -87,6 +87,7 @@ class X11Window: Base {
 		windowAttributes.override_redirect = override_redirect;
 		windowAttributes.background_pixmap = None;
 		windowAttributes.event_mask = eventMask;
+		windowAttributes.border_pixmap = None;
 		windowAttributes.border_pixel = 0;
 		windowAttributes.bit_gravity = NorthWestGravity;
 		windowAttributes.colormap = XCreateColormap(wm.displayHandle, root, wm.graphicsInfo.visual, AllocNone);

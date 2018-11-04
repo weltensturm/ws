@@ -131,6 +131,15 @@ class Property(ulong Format, bool List): BaseProperty {
 		update;
 	}
 
+	this(x11.X.Window window, Atom property, PropertyList list = null){
+		if(list)
+			list.add(this);
+		this.window = window;
+		this.name = name;
+		this.property = property;
+		update;
+	}
+
 	override void update(){
 		auto newValue = get;
 		foreach(handler; handlers)
@@ -175,9 +184,9 @@ class Property(ulong Format, bool List): BaseProperty {
 		if(!p)
 			return FullType.init;
 		FullType value;
-		static if(List)
+		static if(List){
 			value = (cast(Type*)p)[0..count].dup;
-		else static if(is(Type == string))
+		}else static if(is(Type == string))
 			value = (cast(char*)p)[0..count].to!string;
 		else
 			value = *(cast(Type*)p);
@@ -189,10 +198,81 @@ class Property(ulong Format, bool List): BaseProperty {
 		static if(List){
 			rawset(Format, 32, PropModeReplace, data.ptr, data.length);
 		}else static if(is(Type == string)){
-			rawset(XInternAtom(wm.displayHandle, "UTF8_STRING", False), 8, PropModeReplace, data.toStringz, data.length);
+			rawset(Atoms.UTF8_STRING, 8, PropModeReplace, data.toStringz, data.length);
 		}else{
 			rawset(Format, 32, PropModeReplace, &data, 1);
 		}
 	}
 
 }
+
+
+class PropertyError: Exception {
+	this(string msg){
+		super(msg);
+	}
+}
+
+
+auto dispatchProperty(string name)(x11.X.Window window){
+
+	struct Proxy {
+
+		void get(T)(void delegate(T) fn){
+			ulong count;
+			int format;
+			ulong bytes_after;
+			ubyte* p;
+			Atom type;
+
+			if(XGetWindowProperty(wm.displayHandle, window, Atoms.opDispatch!name, 0L, long.max, 0, AnyPropertyType,
+			   &type, &format, &count, &bytes_after, &p) == 0 && p){
+
+				import std.stdio, std.traits, std.range;
+				writeln(type, ' ', format, ' ', count);
+
+				static if(is(T == string)){
+					fn((cast(char*)p)[0..count].to!string);
+				}else static if(isIterable!T){
+					alias Type = ElementType!T;
+					Type[] result;
+					result.length = count;
+					auto casted = cast(Type*)p;
+					foreach(i; 0..count){
+						result[i] = casted[i];
+					}
+					fn(result);
+				}else{
+					fn(cast(T*)p);
+				}
+
+				XFree(p);
+			}
+		}
+
+		void get(T)(void function(T) fn){
+			import std.functional;
+			get(fn.toDelegate);
+		}
+
+	}
+
+	return Proxy();
+
+}
+
+
+auto props(x11.X.Window window){
+
+	struct Dispatcher {
+
+		auto opDispatch(string name)(){
+			return dispatchProperty!name(window);
+		}
+
+	}
+
+	return Dispatcher();
+
+}
+

@@ -177,6 +177,22 @@ private double clamp(double n, double min, double max){
 unittest {
 
 	import std.string;
+
+
+	void assertEqualA(Angle left, Angle right){
+		assert((left.p - right.p).abs < 0.00001, "%s not equal %s".format(left, right));
+		assert((left.y - right.y).abs < 0.00001, "%s not equal %s".format(left, right));
+		assert((left.r - right.r).abs < 0.00001, "%s not equal %s".format(left, right));
+	}
+
+	void assertEqualQ(Quaternion left, Quaternion right){
+		assert((left.w - right.w).abs < 0.00001, "%s not equal %s".format(left, right));
+		assert((left.x - right.x).abs < 0.00001, "%s not equal %s".format(left, right));
+		assert((left.y - right.y).abs < 0.00001, "%s not equal %s".format(left, right));
+		assert((left.z - right.z).abs < 0.00001, "%s not equal %s".format(left, right));
+	}
+
+
 	void assertEqual(T1, T2)(T1 o1, T2 o2){
 		assert(o1 == o2, "%s not equal %s".format(o1, o2));
 	}
@@ -185,9 +201,9 @@ unittest {
 	assertEqual((Quaternion(Angle(-90,0,0))*Vector!3(1,0,0)).normal, Vector!3(0,0,1));
 	assertEqual((Quaternion(Angle(0,90,0))*Vector!3(1,0,0)).normal, Vector!3(0,1,0));
 	Quaternion f = Angle(0,95,90);
-	assertEqual(f.euler(), Angle(0,95,90));
+	assertEqualA(f.euler(), Angle(0,95,90));
 	Quaternion conv = Quaternion.euler(f.euler());
-	assertEqual(f, conv);
+	assertEqualQ(f, conv);
 }
 
 
