@@ -197,10 +197,12 @@ class X11WindowManager: BaseWindowManager {
 		return glXGetCurrentContext();
 	}
 
-	void processEvents(){
+	void processEvents(void delegate(XEvent*) handleAll=null){
 		XEvent e;
 		while(XPending(displayHandle)){
 			XNextEvent(displayHandle, &e);
+			if(handleAll)
+				handleAll(&e);
 			foreach(win; wm.windows){
 				if(e.xany.window == win.windowHandle){
 					activeWindow = win;

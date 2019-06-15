@@ -14,7 +14,7 @@ version(Windows){
 		ws.wm.win32.wm;
 	alias Window = Win32Window;
 	alias WindowHandle = HWND;
-	alias Event = ws.wm.win32.api.Event;
+	alias WindowEvent = ws.wm.win32.api.Event;
 	alias WindowManager = Win32WindowManager;
 	alias GraphicsContext = Context;
 }
@@ -27,18 +27,20 @@ version(Posix){
 	alias WindowHandle = ws.wm.x11.api.Window;
 	alias WindowManager = X11WindowManager;
 	alias GraphicsContext = GLXContext;
-	alias Event = XEvent;
+	alias WindowEvent = XEvent;
 }
 
 
 WindowManager wm(){
 	static bool loaded;
 	__gshared WindowManager wm;
-	if(!loaded && wm)
-		return wm;//throw new Exception("Only one thread has access to wm");
-	if(!wm){
-		wm = new WindowManager;
-		loaded = true;
+	synchronized {
+		if(!loaded && wm)
+			return wm;
+		if(!wm){
+			wm = new WindowManager;
+			loaded = true;
+		}
 	}
 	return wm;
 }

@@ -15,7 +15,7 @@ class FrameTimer {
 
 	void tick(){
 		auto newNow = .now;
-		dur = (newNow - now)*60;
+		dur = (newNow - now);
 		now = newNow;
 	}
 

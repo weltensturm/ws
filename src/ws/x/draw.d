@@ -53,8 +53,9 @@ class Cur {
 class Icon {
     Picture picture;
     int[2] size;
-    void destroy(Display* dpy){
-        XRenderFreePicture(dpy, picture);
+    ~this(){
+        // TODO: fix crash if X connection closes before this is called
+        XRenderFreePicture(wm.displayHandle, picture);
     }
 }
 
@@ -104,6 +105,7 @@ struct ClipStack {
             int count;
             auto area = XFixesFetchRegion(wm.displayHandle, stack[$-1], &count);
             XftDrawSetClipRectangles(xft, 0, 0, area, count);
+            XFree(area);
             XFixesSetPictureClipRegion(wm.displayHandle, picture, 0, 0, stack[$-1]);
             if(gc)
                 XFixesSetGCClipRegion(wm.displayHandle, gc, 0, 0, stack[$-1]);
@@ -126,6 +128,33 @@ struct ClipStack {
 }
 
 
+class PixmapDoubleBuffer {
+
+    Pixmap pixmap;
+    WindowHandle window;
+    GC gc;
+    int[2] size;
+
+    alias pixmap this;
+
+    this(WindowHandle window, int[2] size, GC gc, int depth){
+        pixmap = XCreatePixmap(wm.displayHandle, window, size.w, size.h, depth);
+        this.window = window;
+        this.size = size;
+        this.gc = gc;
+    }
+
+    void swap(){
+        XCopyArea(wm.displayHandle, pixmap, window, gc, 0, 0, size.w, size.h, 0, 0);
+    }
+
+    ~this(){
+        XFreePixmap(wm.displayHandle, pixmap);
+    }
+
+}
+
+
 class XDraw: DrawEmpty {
 
     int[2] size;
@@ -145,6 +174,8 @@ class XDraw: DrawEmpty {
     ClipStack clipStack;
 
     Xdbe.BackBuffer drawable;
+    //PixmapDoubleBuffer drawable; // TODO: flatman splits/floating title bars break with this
+
     ManagedPicture picture;
 
     this(ws.wm.Window window){
@@ -160,6 +191,7 @@ class XDraw: DrawEmpty {
         this.size = [wa.width, wa.height];
         gc = XCreateGC(dpy, window, 0, null);
         XSetLineAttributes(dpy, gc, 1, LineSolid, CapButt, JoinMiter);
+        //drawable = new PixmapDoubleBuffer(window, size, gc, wa.depth);
         drawable = new Xdbe.BackBuffer(dpy, window);
         xft = XftDrawCreate(dpy, drawable, wa.visual, wa.colormap);
         visual = wa.visual;
@@ -178,7 +210,12 @@ class XDraw: DrawEmpty {
         this.size = size;
         XWindowAttributes wa;
         XGetWindowAttributes(dpy, window, &wa);
+        /+
+        .destroy(drawable);
+        drawable = new PixmapDoubleBuffer(window, size, gc, wa.depth);
+        +/
         auto format = XRenderFindVisualFormat(dpy, wa.visual);
+        .destroy(picture);
         picture = new ManagedPicture(dpy, drawable, format);
         XftDrawChange(xft, drawable);
     }
@@ -186,8 +223,8 @@ class XDraw: DrawEmpty {
     override void destroy(){
         foreach(font; fonts)
             font.destroy;
-        drawable = None;
-        picture = None;
+        .destroy(drawable);
+        .destroy(picture);
         XftDrawDestroy(xft);
         XFreeGC(dpy, gc);
     }

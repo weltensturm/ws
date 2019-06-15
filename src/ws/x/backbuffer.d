@@ -30,8 +30,8 @@ class Xdbe {
         }
         
         ~this(){
-            //XdbeDeallocateBackBufferName(dpy, dbe);
-            // X is faster than GC
+            XdbeDeallocateBackBufferName(dpy, dbe);
+            // TODO: ensure X connection
         }
 
         void swap(){

@@ -27,7 +27,7 @@ class X11Window: Base {
 	bool isActive = true;
 	WindowHandle windowHandle;
 	GraphicsContext graphicsContext;
-	List!Event eventQueue;
+	List!WindowEvent eventQueue;
 
 	XIC inputContext;
 	int oldX, oldY;
@@ -58,7 +58,7 @@ class X11Window: Base {
 		hidden = true;
 		title = t;
 		size = [w, h];
-		eventQueue = new List!Event;
+		eventQueue = new List!WindowEvent;
 
 		auto eventMask =
 				ExposureMask |
@@ -287,7 +287,7 @@ class X11Window: Base {
 	}
 
 
-	bool gettextprop(x11.X.Window w, Atom atom, ref string text){
+	bool gettextprop(WindowHandle w, Atom atom, ref string text){
 		char** list;
 		int n;
 		XTextProperty name;
@@ -335,7 +335,7 @@ class X11Window: Base {
 
 	void onPaste(string){}
 
-	void processEvent(Event* e){
+	void processEvent(WindowEvent* e){
 		switch(e.type){
 			case ConfigureNotify:
 				if(size.x != e.xconfigure.width || size.y != e.xconfigure.height){

@@ -218,6 +218,40 @@ auto dispatchProperty(string name)(x11.X.Window window){
 
 	struct Proxy {
 
+		T get(T)(){
+			ulong count;
+			int format;
+			ulong bytes_after;
+			ubyte* p;
+			Atom type;
+
+			if(XGetWindowProperty(wm.displayHandle, window, Atoms.opDispatch!name, 0L, long.max, 0, AnyPropertyType,
+			   &type, &format, &count, &bytes_after, &p) == 0 && p){
+
+				scope(exit)
+					XFree(p);
+
+				import std.stdio, std.traits, std.range;
+
+				static if(is(T == string)){
+					return (cast(char*)p)[0..count].to!string;
+				}else static if(isIterable!T){
+					alias Type = ElementType!T;
+					Type[] result;
+					result.length = count;
+					auto casted = cast(Type*)p;
+					foreach(i; 0..count){
+						result[i] = casted[i];
+					}
+					return result;
+				}else{
+					return *(cast(T*)p);
+				}
+
+			}
+			return T.init;
+		}
+
 		void get(T)(void delegate(T) fn){
 			ulong count;
 			int format;
