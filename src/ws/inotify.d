@@ -11,6 +11,7 @@ import
     std.stdio,
     std.algorithm,
     std.conv,
+    std.file,
     ws.event;
 
 
@@ -57,22 +58,30 @@ class Inotify {
     }
 
 
-    static void watch(string directory, void delegate(string, string, int) event){
+    static void watch(string path, void delegate(string, string, int) event){
         assert(inotify >= 0);
+        if(!path.isDir)
+            throw new Exception("\"" ~ path ~ "\" is not a directory. Please don't watch single files, they need to be \"re-watched\" in almost all cases on change");
         foreach(wd, watcher; staticWatchers){
-            if(watcher.directory == directory){
+            if(watcher.directory == path){
                 watcher.event ~= event;
                 return;
             }
         }
-        if(staticWatchers.values.find!(a => a.directory == directory).length){
+        if(staticWatchers.values.find!(a => a.directory == path).length){
             return;
         }
-        int wd = inotify_add_watch(inotify, directory.toStringz, IN_CLOSE_WRITE | IN_MOVED_TO | IN_CREATE | IN_MOVED_FROM | IN_DELETE);
+        int wd = inotify_add_watch(inotify, path.toStringz,
+                IN_CLOSE_WRITE
+                | IN_MOVED_FROM
+                | IN_MOVED_TO
+                | IN_CREATE
+                | IN_DELETE
+                | IN_MASK_ADD);
         if(wd < 0)
-            throw new Exception("inotify error in %s: %s".format(directory, errno));
+            throw new Exception("inotify error in %s: %s".format(path, errno));
         auto watcher = new Watcher;
-        watcher.directory = directory;
+        watcher.directory = path;
         watcher.event ~= event;
         staticWatchers[wd] = watcher;
     }

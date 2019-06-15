@@ -34,7 +34,6 @@ void execute(string context, string type, string serialized, string command, str
 				if(line.length)
 					context.log("%s stderr %s".format(pid, line));
 			}
-			reader.yieldForce;
 			auto res = pipes.pid.wait;
 			context.log("%s exit %s".format(pid, res));
 			context.logExec("%s exit %s".format(pid, res));
