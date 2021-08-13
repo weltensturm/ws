@@ -13,6 +13,9 @@ class Animation {
 	static void update(){
 		time = now;
 	}
+	static this(){
+		update;
+	}
 
 	double start;
 	double end;
