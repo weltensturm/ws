@@ -56,7 +56,6 @@ class X11Window: Base {
 
 	this(int w, int h, string t, bool override_redirect=false){
 		hidden = true;
-		title = t;
 		size = [w, h];
 		eventQueue = new List!WindowEvent;
 
@@ -115,6 +114,7 @@ class X11Window: Base {
 		utf8 = XInternAtom(wm.displayHandle, "UTF8_STRING", false);
 		netWmName = XInternAtom(wm.displayHandle, "_NET_WM_NAME".toStringz, False);
 		XSetWMProtocols(wm.displayHandle, windowHandle, &wmDelete, 1);
+		setTitle(t);
 		drawInit;
 		assert(windowHandle);
 	}
@@ -167,7 +167,6 @@ class X11Window: Base {
 			return;
 		hidden = true;
 		isActive = false;
-		wm.windows.remove(this);
 		XDestroyWindow(wm.displayHandle, windowHandle);
 	}
 
@@ -190,6 +189,8 @@ class X11Window: Base {
 
 	void onDestroy(){
 		isActive = false;
+		hidden = true;
+		wm.windows.remove(this);
 		draw.destroy;
 	}
 
@@ -336,6 +337,8 @@ class X11Window: Base {
 	void onPaste(string){}
 
 	void processEvent(WindowEvent* e){
+		if(!isActive)
+			return;
 		switch(e.type){
 			case ConfigureNotify:
 				if(size.x != e.xconfigure.width || size.y != e.xconfigure.height){
