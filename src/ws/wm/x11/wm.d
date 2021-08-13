@@ -197,9 +197,10 @@ class X11WindowManager: BaseWindowManager {
 		return glXGetCurrentContext();
 	}
 
-	void processEvents(void delegate(XEvent*) handleAll=null){
+	void processEvents(void delegate(XEvent*) handleAll=null, bool syncNext=false){
 		XEvent e;
-		while(XPending(displayHandle)){
+		while(XPending(displayHandle) || syncNext){
+			syncNext = false;
 			XNextEvent(displayHandle, &e);
 			if(handleAll)
 				handleAll(&e);
