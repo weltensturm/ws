@@ -42,10 +42,10 @@ class Inotify {
             return;
         inotify = inotify_init;
         if(inotify < 0)
-                throw new Exception("Failed to initialize inotify: %s".format(errno));
-            timeOut.tv_sec = 1;
-            timeOut.tv_usec = 0;
-            FD_ZERO(&descriptorSet);
+            throw new Exception("Failed to initialize inotify: %s".format(errno));
+        timeOut.tv_sec = 0;
+        timeOut.tv_usec = 0;
+        FD_ZERO(&descriptorSet);
     }
 
 
