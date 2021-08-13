@@ -134,22 +134,70 @@ class PixmapDoubleBuffer {
     WindowHandle window;
     GC gc;
     int[2] size;
+    Display* dpy;
 
     alias pixmap this;
 
-    this(WindowHandle window, int[2] size, GC gc, int depth){
-        pixmap = XCreatePixmap(wm.displayHandle, window, size.w, size.h, depth);
-        this.window = window;
-        this.size = size;
+    this(Display* dpy, WindowHandle window, GC gc, XWindowAttributes* wa){
+        this.dpy = dpy;
         this.gc = gc;
+        this.window = window;
+        pixmap = XCreatePixmap(dpy, window, wa.width, wa.height, wa.depth);
+        this.size = [wa.width, wa.height];
     }
 
     void swap(){
-        XCopyArea(wm.displayHandle, pixmap, window, gc, 0, 0, size.w, size.h, 0, 0);
+        XCopyArea(dpy, pixmap, window, gc, 0, 0, size.w, size.h, 0, 0);
     }
 
     ~this(){
-        XFreePixmap(wm.displayHandle, pixmap);
+        XFreePixmap(dpy, pixmap);
+    }
+
+}
+
+
+class PictureDoubleBuffer {
+
+    Pixmap backPixmap;
+    ManagedPicture back;
+    ManagedPicture front;
+    WindowHandle window;
+    Display* dpy;
+    int[2] size;
+
+    alias backPixmap this;
+
+    this(Display* dpy, WindowHandle window, XWindowAttributes* wa){
+        this.dpy = dpy;
+        XRenderPictFormat* format = XRenderFindVisualFormat(wm.displayHandle, wa.visual);
+        front = new ManagedPicture(dpy, window, format);
+        backPixmap = XCreatePixmap(dpy, window, wa.width, wa.height, wa.depth);
+        back = new ManagedPicture(dpy, backPixmap, format);
+        this.window = window;
+        this.size = [wa.width, wa.height];
+    }
+
+    void swap(){
+        XRenderComposite(
+            dpy,
+            PictOpSrc,
+            back,
+            None,
+            front,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            size.w,
+            size.h
+        );
+    }
+
+    ~this(){
+        XFreePixmap(wm.displayHandle, backPixmap);
     }
 
 }
@@ -173,8 +221,11 @@ class XDraw: DrawEmpty {
 
     ClipStack clipStack;
 
-    Xdbe.BackBuffer drawable;
-    //PixmapDoubleBuffer drawable; // TODO: flatman splits/floating title bars break with this
+    version(Xdbe){
+        Xdbe.BackBuffer drawable;
+    }else{
+        PixmapDoubleBuffer drawable; // TODO: flatman splits/floating title bars break with this
+    }
 
     ManagedPicture picture;
 
@@ -189,10 +240,13 @@ class XDraw: DrawEmpty {
         screen = DefaultScreen(dpy);
         this.window = window;
         this.size = [wa.width, wa.height];
-        gc = XCreateGC(dpy, window, 0, null);
+        this.gc = XCreateGC(dpy, window, 0, null);
         XSetLineAttributes(dpy, gc, 1, LineSolid, CapButt, JoinMiter);
-        //drawable = new PixmapDoubleBuffer(window, size, gc, wa.depth);
-        drawable = new Xdbe.BackBuffer(dpy, window);
+        version(Xdbe){
+            drawable = new Xdbe.BackBuffer(dpy, window);   
+        }else{
+            drawable = new PixmapDoubleBuffer(dpy, window, gc, &wa);
+        }
         xft = XftDrawCreate(dpy, drawable, wa.visual, wa.colormap);
         visual = wa.visual;
         auto format = XRenderFindVisualFormat(dpy, wa.visual);
@@ -210,12 +264,13 @@ class XDraw: DrawEmpty {
         this.size = size;
         XWindowAttributes wa;
         XGetWindowAttributes(dpy, window, &wa);
-        /+
-        .destroy(drawable);
-        drawable = new PixmapDoubleBuffer(window, size, gc, wa.depth);
-        +/
-        auto format = XRenderFindVisualFormat(dpy, wa.visual);
         .destroy(picture);
+        version(Xdbe){}
+        else{
+            .destroy(drawable);
+            drawable = new PixmapDoubleBuffer(dpy, window, gc, &wa);
+        }
+        auto format = XRenderFindVisualFormat(dpy, wa.visual);
         picture = new ManagedPicture(dpy, drawable, format);
         XftDrawChange(xft, drawable);
     }
@@ -371,7 +426,6 @@ class XDraw: DrawEmpty {
         //XCopyArea(dpy, drawable, window, gc, 0, 0, size.w, size.h, 0, 0);
         //XRenderComposite(dpy, PictOpSrc, picture, None, frontBuffer, 0, 0, 0, 0, 0, 0, size.w, size.h);
         drawable.swap;
-        //XSync(dpy, False);
     }
 
 }
