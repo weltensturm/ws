@@ -222,6 +222,8 @@ version(Posix){
 
                 foreach(i, fbc; configs[0..nbConfigs]){
                     auto vis = cast(XVisualInfo*)glXGetVisualFromFBConfig(display, fbc);
+                    if(!vis)
+                        continue;
                     scope(exit)
                         XFree(vis);
                     if(vis.visualid == visual.visualid){
