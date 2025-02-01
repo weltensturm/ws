@@ -5,17 +5,18 @@ import
 	std.file,
 	std.algorithm,
 	std.array,
+	std.process,
 	std.path,
 	std.regex,
 	std.stdio,
 	std.string;
 
 
-const string[] desktopPaths = [
-	"/usr",
-	"/usr/local",
-	"~/.local"
-];
+string[] desktopPaths(){
+	return
+		["~/.local/share".expandTilde]
+		~ environment.get("XDG_DATA_DIRS").split(':');
+}
 
 
 class DesktopEntry {
@@ -61,13 +62,14 @@ DesktopEntry[] readDesktop(string path){
 DesktopEntry[] getAll(){
 	DesktopEntry[] result;
 	foreach(path; desktopPaths){
-		if((path.expandTilde~"/share/applications").exists)
-			foreach(entry; (path.expandTilde~"/share/applications").dirEntries(SpanMode.breadth))
+		if((buildPath(path, "applications")).exists){
+			foreach(entry; buildPath(path, "applications").dirEntries(SpanMode.breadth))
 				try
 					result ~= readDesktop(entry);
 				catch(FileException e){}
 				catch(Throwable t)
 					writeln("DESKTOP_ERROR %s: %s".format(entry, t));
+		}
 	}
 	return result;
 }

@@ -12,7 +12,7 @@ import
     derelict.freetype.ft,
     derelict.util.exception,
 
-    ws.bindings.fontconfig,
+    //ws.bindings.xlib,
     ws.log,
     ws.string,
     ws.gl.gl,
@@ -20,8 +20,21 @@ import
     ws.gl.batch;
 
 
-version(Posix)
+version(Posix){
     import std.path;
+    import ws.bindings.xlib:
+        FcPattern,
+        FcResult,
+        FcNameParse,
+        FcConfigSubstitute,
+        FcDefaultSubstitute,
+        FcPatternGetString,
+        FcPatternGetInteger,
+        FcMatchPattern,
+        FcFontMatch,
+        FcChar8,
+        FcPatternDestroy;
+}
 
 
 
@@ -62,7 +75,7 @@ version(Posix){
         char *file;
         int index;
         name ~= "-" ~ size.to!string;
-        auto pat = FcNameParse(name.toStringz);
+        auto pat = FcNameParse(cast(ubyte*)name.toStringz);
         FcConfigSubstitute(null, pat, FcMatchPattern);
         FcDefaultSubstitute(pat);
         match = FcFontMatch(null, pat, &result);

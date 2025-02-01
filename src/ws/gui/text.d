@@ -39,10 +39,9 @@ class Text: Base {
 	override void onDraw(){
 		draw.setFont(font, fontSize);
 		draw.setColor(style.fg.normal);
-		auto offsetRight = max(0.0,-offset)*fontSize;
-		auto offsetLeft = max(0.0,offset-1)*fontSize;
-		auto x = pos.x - min(1,max(0,offset))*draw.width(text) + offsetRight - offsetLeft;
-		draw.text([x.to!int, pos.y], size.h, text);
+		auto w = draw.width(text);
+		auto x = w*(-offset) + size.w*offset;
+		draw.text([pos.x + x.to!int, pos.y], size.h, text, 0);
 	}
 
 }

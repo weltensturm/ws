@@ -4,7 +4,8 @@ module ws.gui.keyboard_old;
 import io = ws.io;
 
 version(linux){
-	import x11.keysymdef;
+	// import x11.keysymdef;
+	import ws.bindings.xlib;
 }
 
 class keyboard {

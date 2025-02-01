@@ -260,7 +260,7 @@ protected:
 	extern(Windows)
 	static LRESULT internalEvents(HWND window, UINT msg, WPARAM wpar, LPARAM lpar) nothrow {
 		try {
-			foreach(w; cast(List!Win32Window)wm.windows){
+			foreach(w; cast(Win32Window[])wm.windows){
 				if(w.handle == window){
 					eventQueue ~= translateEvent(w, msg, wpar, lpar);
 					if(msg == WM_CLOSE)

@@ -4,10 +4,7 @@ version(Posix):
 
 public import
 	derelict.opengl3.glx,
-	x11.X,
-	x11.Xlib,
-	x11.Xutil,
-	ws.wm.x11.cursorfont;
+	ws.bindings.xlib;
 
 extern(C){
 

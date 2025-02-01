@@ -4,8 +4,9 @@ module ws.gui.input;
 import io = ws.io;
 import std.conv;
 
-version(linux)
-	import x11.keysymdef;
+version(linux) {
+	import ws.bindings.xlib;
+}
 
 version(Windows)
 	import core.sys.windows.windows;

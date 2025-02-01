@@ -268,7 +268,7 @@ class Base {
 			mouseChild.onMouseFocus(false);
 			mouseChild = null;
 		}
-	};
+	}
 
 	void setCursor(Mouse.cursor c){
 		cursor = c;

@@ -4,7 +4,7 @@ module ws.x.backbuffer;
 version(linux):
 
 
-import ws.bindings.Xdbe, std.string;
+import ws.bindings.xlib, std.string;
 
 
 __gshared:

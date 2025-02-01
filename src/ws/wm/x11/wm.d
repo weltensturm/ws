@@ -20,13 +20,14 @@ __gshared:
 
 
 
-private struct Mapping(int m, int t, T, string fn){
+private struct Mapping(alias m, int t, T, string fn){
 	enum mask = m;
 	enum type = t;
 	alias Event = T;
 	enum attribute = fn;
 }
 
+pragma(msg, ButtonPressMask);
 
 alias EventMap = AliasSeq!(
 	Mapping!(ButtonPressMask, 			ButtonPress, 		XButtonPressedEvent,		"xbutton"),
@@ -151,7 +152,7 @@ class X11WindowManager: BaseWindowManager {
 	GLXFBConfig* mFBConfig;
 	T_glXCreateContextAttribsARB glXCreateContextAttribsARB;
 
-	void delegate(XEvent*)[][int][x11.X.Window] handler;
+	void delegate(XEvent*)[][int][WindowHandle] handler;
 	void delegate(XEvent*)[][int] handlerAll;
 
 	void on(void delegate(XEvent*)[int] handlers){
@@ -160,8 +161,10 @@ class X11WindowManager: BaseWindowManager {
 		}
 	}
 
-	void on()(x11.X.Window window, void delegate(XEvent*)[int] handlers){
-		int mask;
+	void on()(WindowHandle window, void delegate(XEvent*)[int] handlers){
+		XWindowAttributes wa;
+		XGetWindowAttributes(wm.displayHandle, window, &wa);
+		long mask = wa.your_event_mask;
 		foreach(ev, dg; handlers){
 			foreach(mapping; EventMap){
 				if(mapping.type == ev)
@@ -169,11 +172,13 @@ class X11WindowManager: BaseWindowManager {
 			}
 			handler[window][ev] ~= dg;
 		}
-		//XSelectInput(displayHandle, window, mask);
+		XSelectInput(displayHandle, window, mask);
 	}
 
-	void on(Args...)(x11.X.Window window, Args args) if(allSatisfy!(isCallable, args)) {
-		int mask;
+	void on(Args...)(WindowHandle window, Args args) if(allSatisfy!(isCallable, args)) {
+		XWindowAttributes wa;
+		XGetWindowAttributes(wm.displayHandle, window, &wa);
+		long mask = wa.your_event_mask;
 		foreach(dg; args){
 			bool found;
 			foreach(mapping; EventMap){

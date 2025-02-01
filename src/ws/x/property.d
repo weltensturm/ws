@@ -5,89 +5,66 @@ import
 	std.array,
 	std.string,
 	std.conv,
-	x11.X,
-	x11.Xlib,
-	x11.Xutil,
-	x11.Xatom,
+    ws.bindings.xlib,
 	ws.x.atoms,
 	ws.gui.base,
-	ws.wm;
+	ws.wm,
+	ws.identity;
 
 
-class BaseProperty {
+mixin template WindowProperties(string wsv) {
 
-	x11.X.Window window;
-	Atom property;
-	string name;
-
-	abstract void update();
-
-}
-
-
-class PropertyList {
-
-	private BaseProperty[] properties;
-
-	void add(BaseProperty property){
-		properties ~= property;
+	static foreach(line; wsv.splitLines().map!strip.filter!`a.length`) {
+		mixin(iq{
+			Property!(cast(long)$(line.split()[1].strip("[]")),
+			          $(line.split()[1].endsWith("[]").to!string))
+			    $(line.split()[0]);
+		}.text);
 	}
 
-	void remove(BaseProperty property){
-		properties = properties.without(property);
-	}
-
-	void remove(x11.X.Window window){
-		properties = properties.filter!(a => a.window != window).array;
-	}
-
-	void update(XPropertyEvent* event){
-		foreach(property; properties){
-			if(property.property == event.atom && property.window == event.window){
-				property.update;
+	void setPropertyWindow(WindowHandle window) {
+		static foreach(line; wsv.splitLines().map!strip.filter!`a.length`) {
+			{
+				enum format = line.split()[1].strip("[]");
+				enum isList = line.split()[1].endsWith("[]") ? "true" : "false";
+				enum name = line.split()[0];
+				mixin("this." ~ name ~ " = new Property!(cast(long)" ~ format ~ ", " ~ isList ~ ")(window, \"" ~ name ~ "\");");
 			}
 		}
 	}
 
-	void update(){
-		foreach(property; properties){
-			property.update;
+	void updateProperties(){
+		static foreach(line; wsv.splitLines().map!strip.filter!`a.length`) {
+			{
+				enum name = line.split()[0];
+				mixin(iq{
+					$(name).update();
+				}.text);
+			}
 		}
 	}
 
-}
-
-mixin template PropertiesMixin(string name, string atom, int type, bool isList, Args...){
-	mixin("Property!(type, isList) " ~ name ~ ";");
-	static if(Args.length)
-		mixin PropertiesMixin!Args;
-}
-
-
-struct Properties(Args...) {
-
-	mixin PropertiesMixin!Args;
-	PropertyList propertyList;
-
-	void window(x11.X.Window window){
-		propertyList = new PropertyList;
-		void init(string name, string atom, int type, bool isList, Args...)(){
-			mixin("this." ~ name ~ " = new Property!(type, isList)(window, atom, propertyList);");
-			static if(Args.length)
-				init!Args;
+	void updateProperties(XPropertyEvent* event){
+		static foreach(line; wsv.splitLines().map!strip.filter!`a.length`) {
+			{
+				enum name = line.split()[0];
+				mixin(iq{
+					auto property = this.$(name);
+					if(property.property == event.atom && property.window == event.window){
+						property.update;
+					}
+				}.text);
+			}
 		}
-		init!Args;
 	}
-
-	void update(Args...)(Args args){
-		propertyList.update(args);
-	}
-
 }
 
 
-class Property(ulong Format, bool List): BaseProperty {
+class Property(long Format, bool List) {
 
+	WindowHandle window;
+	Atom property;
+	string name;
 	bool exists;
 
 	static if(Format == XA_CARDINAL || Format == XA_PIXMAP || Format == XA_VISUALID)
@@ -95,7 +72,7 @@ class Property(ulong Format, bool List): BaseProperty {
 	static if(Format == XA_ATOM)
 		alias Type = Atom;
 	static if(Format == XA_WINDOW)
-		alias Type = x11.X.Window;
+		alias Type = WindowHandle;
 	static if(Format == XA_STRING)
 		alias Type = string;
 
@@ -105,6 +82,7 @@ class Property(ulong Format, bool List): BaseProperty {
 		alias FullType = Type;
 
 	FullType value;
+	alias value this;
 
 	void delegate(FullType)[] handlers;
 
@@ -119,28 +97,21 @@ class Property(ulong Format, bool List): BaseProperty {
 		else static assert(false, op ~ "= not supported");
 	}
 
-	alias value this;
-
-
-	this(x11.X.Window window, string name, PropertyList list = null){
-		if(list)
-			list.add(this);
+	this(WindowHandle window, string name){
 		this.window = window;
 		this.name = name;
 		property = XInternAtom(wm.displayHandle, name.toStringz, false);
 		update;
 	}
 
-	this(x11.X.Window window, Atom property, PropertyList list = null){
-		if(list)
-			list.add(this);
+	this(WindowHandle window, Atom property){
 		this.window = window;
 		this.name = name;
 		this.property = property;
 		update;
 	}
 
-	override void update(){
+	void update(){
 		auto newValue = get;
 		foreach(handler; handlers)
 			handler(newValue);
@@ -152,7 +123,11 @@ class Property(ulong Format, bool List): BaseProperty {
 		ulong dl;
 		ubyte* p;
 		Atom da;
-		if(XGetWindowProperty(wm.displayHandle, window, property, 0L, List || is(Type == string) ? long.max : 1, 0, is(Type == string) ? Atoms.UTF8_STRING : Format, &da, &di, &count, &dl, &p) == 0 && p){
+		if(XGetWindowProperty(wm.displayHandle, window, property, 0L,
+		                      List || is(Type == string) ? long.max : 1,
+		                      0,
+		                      is(Type == string) ? Atoms.UTF8_STRING : Format,
+		                      &da, &di, &count, &dl, &p) == 0 && p){
 			exists = true;
 			return p;
 		}
@@ -164,7 +139,7 @@ class Property(ulong Format, bool List): BaseProperty {
 		XChangeProperty(wm.displayHandle, window, property, format, size, mode, cast(ubyte*)data, cast(int)length);
 	}
 
-	void request(x11.X.Window window, Type[] data){
+	void request(WindowHandle window, Type[] data){
 		XEvent e;
 		e.type = ClientMessage;
 		e.xclient.window = window;
@@ -214,7 +189,7 @@ class PropertyError: Exception {
 }
 
 
-auto dispatchProperty(string name)(x11.X.Window window){
+auto dispatchProperty(string name)(WindowHandle window){
 
 	struct Proxy {
 
@@ -296,7 +271,7 @@ auto dispatchProperty(string name)(x11.X.Window window){
 }
 
 
-auto props(x11.X.Window window){
+auto props(WindowHandle window){
 
 	struct Dispatcher {
 

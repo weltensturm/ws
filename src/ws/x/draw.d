@@ -9,14 +9,9 @@ import
     std.math,
     std.conv,
     std.range,
-    x11.X,
-    x11.Xlib,
-    x11.extensions.render,
-    x11.extensions.Xrender,
-    x11.extensions.Xfixes,
     ws.draw,
     ws.wm,
-    ws.bindings.xft,
+    ws.bindings.xlib,
     ws.gui.point,
     ws.x.backbuffer,
     ws.x.font;
@@ -135,6 +130,7 @@ class PixmapDoubleBuffer {
     GC gc;
     int[2] size;
     Display* dpy;
+    XSyncFence fence;
 
     alias pixmap this;
 
@@ -144,10 +140,30 @@ class PixmapDoubleBuffer {
         this.window = window;
         pixmap = XCreatePixmap(dpy, window, wa.width, wa.height, wa.depth);
         this.size = [wa.width, wa.height];
+        fence = XSyncCreateFence(dpy, window, false);
     }
 
     void swap(){
-        XCopyArea(dpy, pixmap, window, gc, 0, 0, size.w, size.h, 0, 0);
+        //XCopyArea(dpy, pixmap, window, gc, 0, 0, size.w, size.h, 0, 0);
+        XPresentPixmap(
+            dpy,
+            window,
+            pixmap,
+            0,
+            None,
+            None,
+            0, 0,
+            None,
+            None,
+            fence,
+            PresentOptionAsync,
+            0,
+            1,
+            0,
+            null,
+            0
+        );
+        XSyncAwaitFence(dpy, &fence, 1);
     }
 
     ~this(){
@@ -208,7 +224,7 @@ class XDraw: DrawEmpty {
     int[2] size;
     Display* dpy;
     int screen;
-    x11.X.Window window;
+    WindowHandle window;
     Visual* visual;
     XftDraw* xft;
     GC gc;
@@ -233,7 +249,7 @@ class XDraw: DrawEmpty {
         this(wm.displayHandle, window.windowHandle);
     }
 
-    this(Display* dpy, x11.X.Window window){
+    this(Display* dpy, WindowHandle window){
         XWindowAttributes wa;
         XGetWindowAttributes(dpy, window, &wa);
         this.dpy = dpy;
@@ -358,7 +374,11 @@ class XDraw: DrawEmpty {
             auto offsetLeft = max(0.0,offset-1)*fontHeight;
             auto x = pos.x - min(1,max(0,offset))*width + offsetRight - offsetLeft;
             auto y = this.size.h - pos.y - 2;
-            XftDrawStringUtf8(xft, &color.rgb, font.xfont, cast(int)x.lround, cast(int)y.lround, text.toStringz, cast(int)text.length);
+            XftDrawStringUtf8(
+                xft, &color.rgb, font.xfont,
+                cast(int)x.lround, cast(int)y.lround,
+                cast(ubyte*)text.toStringz, cast(int)text.length
+            );
             return this.width(text);
         }
         return 0;

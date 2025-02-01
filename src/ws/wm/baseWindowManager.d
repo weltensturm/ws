@@ -1,7 +1,7 @@
 module ws.wm.baseWindowManager;
 
 import
-	ws.list,
+	std.algorithm,
 	ws.wm,
 	ws.gui.input;
 
@@ -18,19 +18,18 @@ class BaseWindowManager {
 	
 	package {
 		Window activeWindow;
-		List!Window windows;
+		Window[] windows;
 	}
 
-	this(){
-		windows = new List!Window;
-	}
+	this(){}
 
 	void add(Window window){
 		windows ~= window;
 	}
 
 	void remove(Window window){
-		windows.remove(window);
+		auto at = windows.countUntil(window);
+		windows = windows[0 .. at] ~ windows[at .. $];
 	}
 
 	bool hasActiveWindows(){

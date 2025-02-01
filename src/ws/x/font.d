@@ -5,10 +5,7 @@ version(Posix):
 
 import
 	std.string,
-	x11.Xlib,
-	x11.extensions.Xrender,
-	ws.bindings.xft,
-	ws.bindings.fontconfig;
+    ws.bindings.xlib;
 
 
 class Font {

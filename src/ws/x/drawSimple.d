@@ -9,14 +9,9 @@ import
     std.math,
     std.conv,
     std.range,
-    x11.X,
-    x11.Xlib,
-    x11.extensions.render,
-    x11.extensions.Xrender,
-    x11.extensions.Xfixes,
+    ws.bindings.xlib,
     ws.draw,
     ws.wm,
-    ws.bindings.xft,
     ws.gui.point,
     ws.x.backbuffer,
     ws.x.font;
@@ -46,7 +41,7 @@ class XDrawSimple: DrawEmpty {
     int[2] size;
     Display* dpy;
     int screen;
-    x11.X.Window window;
+    WindowHandle window;
     GC gc;
 
     Color color;
@@ -56,7 +51,7 @@ class XDrawSimple: DrawEmpty {
         this(wm.displayHandle, window.windowHandle);
     }
 
-    this(Display* dpy, x11.X.Window window){
+    this(Display* dpy, WindowHandle window){
         XWindowAttributes wa;
         XGetWindowAttributes(dpy, window, &wa);
         this.dpy = dpy;

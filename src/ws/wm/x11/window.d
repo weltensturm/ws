@@ -27,7 +27,6 @@ class X11Window: Base {
 	bool isActive = true;
 	WindowHandle windowHandle;
 	GraphicsContext graphicsContext;
-	List!WindowEvent eventQueue;
 
 	XIC inputContext;
 	int oldX, oldY;
@@ -57,7 +56,6 @@ class X11Window: Base {
 	this(int w, int h, string t, bool override_redirect=false){
 		hidden = true;
 		size = [w, h];
-		eventQueue = new List!WindowEvent;
 
 		auto eventMask =
 				ExposureMask |
@@ -104,9 +102,9 @@ class X11Window: Base {
 
 		inputContext = XCreateIC(
 			XOpenIM(wm.displayHandle, null, null, null),
-			XNClientWindow, windowHandle,
-			XNFocusWindow, windowHandle,
-			XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
+			XNClientWindow.ptr, windowHandle,
+			XNFocusWindow.ptr, windowHandle,
+			XNInputStyle.ptr, XIMPreeditNothing | XIMStatusNothing,
 			null
 		);
 		XSelectInput(wm.displayHandle, windowHandle, eventMask);
@@ -190,7 +188,7 @@ class X11Window: Base {
 	void onDestroy(){
 		isActive = false;
 		hidden = true;
-		wm.windows.remove(this);
+		wm.remove(this);
 		draw.destroy;
 	}
 
@@ -298,7 +296,7 @@ class X11Window: Base {
 		if(name.encoding == Atoms.STRING){
 			text = to!string(*name.value);
 		}else{
-			if(XmbTextPropertyToTextList(wm.displayHandle, &name, &list, &n) >= XErrorCode.Success && n > 0 && *list){
+			if(XmbTextPropertyToTextList(wm.displayHandle, &name, &list, &n) >= Success && n > 0 && *list){
 				text = (*list).to!string;
 				XFreeStringList(list);
 			}
@@ -438,8 +436,10 @@ class X11Window: Base {
 
 	void resized(int[2] size){
 		this.size = size;
-		if(draw)
+		if(draw){
 			draw.resize(size);
+			onDraw;
+		}
 	}
 
 	void moved(int[2] pos){

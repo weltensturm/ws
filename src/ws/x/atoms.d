@@ -3,9 +3,8 @@ module ws.x.atoms;
 
 import
     std.string,
-    x11.X,
-    x11.Xlib,
-    ws.wm;
+    ws.wm,
+	ws.bindings.c_xlib;
 
 
 class Atoms {
