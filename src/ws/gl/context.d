@@ -130,7 +130,6 @@ version(Windows){
             }
             this.sharedHandle = handle;
             wglMakeCurrent(deviceContext, handle);
-            DerelictGL3.reload();
         }
 
         void swapBuffers(){
@@ -173,9 +172,6 @@ version(Windows){
 version(Posix){
 
     import ws.wm.x11.api;
-    import derelictX = derelict.util.xtypes;
-
-    import derelict.opengl3.glx;
 
     private static GraphicsContext current;
 
@@ -199,7 +195,7 @@ version(Posix){
 
         		wm.glCore = true;
         		glXCreateContextAttribsARB = cast(T_glXCreateContextAttribsARB)
-                                             glXGetProcAddress("glXCreateContextAttribsARB");
+                                             glXGetProcAddress(cast(ubyte*)"glXCreateContextAttribsARB".toStringz);
         		if(!glXCreateContextAttribsARB)
         			wm.glCore = false;
 
@@ -260,13 +256,12 @@ version(Posix){
                 writeln(e);
                 GLint[] att = [GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_ALPHA_SIZE, 8, GLX_DOUBLEBUFFER, 0];
                 graphicsInfo = cast(XVisualInfo*)glXChooseVisual(display, 0, att.ptr);
-                handle = glXCreateContext(display, cast(derelictX.XVisualInfo*)graphicsInfo, null, True);
+                handle = glXCreateContext(display, graphicsInfo, null, True);
                 if(!handle)
                     throw new Exception("glXCreateContext failed");
             }
             glXMakeCurrent(display, cast(uint)window, cast(__GLXcontextRec*)handle);
             current = handle;
-            DerelictGL3.reload();
 
         }
 
@@ -276,6 +271,7 @@ version(Posix){
 
         template opDispatch(string s){
             auto opDispatch(Args...)(Args args){
+                enum s = s[0..1].capitalize ~ s[1..$];
                 if(current != handle){
                     debug(glContextSwitch){
                         import std.stdio;
@@ -286,8 +282,7 @@ version(Posix){
                 }
                 assert(glXGetCurrentContext() == cast(__GLXcontextRec*)handle);
                 debug { gl.check("?"); }
-                enum s = s[0..1].capitalize ~ s[1..$];
-                mixin("alias returns = ReturnType!(gl" ~ s ~ ");");
+                mixin("alias returns = typeof((){ return gl" ~ s ~ "(args); }() );");
                 static if(!is(returns == void)){
                     mixin("auto result = gl" ~ s ~ "(args);");
                     debug { gl.check("gl" ~ s); }

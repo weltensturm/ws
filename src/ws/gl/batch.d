@@ -67,7 +67,7 @@ class Batch {
 		foreach(array; arrays){
 			context.bindBuffer(GL_ARRAY_BUFFER, array.globj);
 			context.enableVertexAttribArray(array.attributeId),
-			context.vertexAttribPointer(array.attributeId, array.size, GL_FLOAT, GL_FALSE, 0, null);
+			context.vertexAttribPointer(array.attributeId, array.size, GL_FLOAT, cast(ubyte)GL_FALSE, 0, null);
 		}
 
 		done = true;

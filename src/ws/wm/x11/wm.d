@@ -5,9 +5,9 @@ version(Posix):
 import
 	std.stdio,
 	std.traits,
+	std.string,
 	std.meta,
 	std.algorithm,
-	derelict.opengl3.gl,
 	ws.wm,
 	ws.wm.baseWindowManager,
 	ws.wm.x11.api,
@@ -79,11 +79,10 @@ class X11WindowManager: BaseWindowManager {
 	this(){
 		XInitThreads();
 		super();
-		DerelictGL3.load();
 		displayHandle = XOpenDisplay(null);
 		glCore = true;
 		glXCreateContextAttribsARB = cast(T_glXCreateContextAttribsARB)
-                glXGetProcAddress("glXCreateContextAttribsARB");
+                glXGetProcAddress(cast(ubyte*)"glXCreateContextAttribsARB".toStringz);
 		if(!glXCreateContextAttribsARB)
 			glCore = false;
         

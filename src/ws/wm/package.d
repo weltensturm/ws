@@ -4,9 +4,7 @@ __gshared:
 
 
 version(Windows){
-	import derelict.opengl3.wgl;
 	pragma(lib, "gdi32.lib");
-	pragma(lib, "DerelictGL3.lib");
 	pragma(lib, "DerelictUtil.lib");
 	import
 		ws.wm.win32.api,

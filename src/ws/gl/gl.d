@@ -1,16 +1,17 @@
 
 module ws.gl.gl;
 
-public import derelict.opengl3.gl3;
-
 import
     std.regex,
     std.traits,
-    derelict.opengl3.wgl,
-    derelict.opengl3.glx,
     ws.gl.context,
     ws.wm,
     ws.sys.library;
+
+public import
+    ws.bindings.gl,
+    ws.bindings.glext,
+    ws.bindings.glx;
 
 version(Windows){
 	import ws.wm.win32.api;
@@ -186,11 +187,11 @@ class gl {
         }
         
         void uniform(const int pos, const float[3][3] m){
-            context.uniformMatrix3fv(pos, 1, matrixTranspose ? GL_TRUE : GL_FALSE, m[0].ptr);
+            context.uniformMatrix3fv(pos, 1, cast(ubyte)(matrixTranspose ? GL_TRUE : GL_FALSE), m[0].ptr);
         } 
         
         void uniform(const int pos, const float[4][4] m){
-            context.uniformMatrix4fv(pos, 1, matrixTranspose ? GL_TRUE : GL_FALSE, m[0].ptr);
+            context.uniformMatrix4fv(pos, 1, cast(ubyte)(matrixTranspose ? GL_TRUE : GL_FALSE), m[0].ptr);
         }
         
         void uniform(const int pos, Vector!3 v){
@@ -198,11 +199,11 @@ class gl {
         }
         
         void uniform(const int pos, Matrix!(3,3) m){
-            context.uniformMatrix3fv(pos, 1, matrixTranspose ? GL_TRUE : GL_FALSE, m.data.ptr);
+            context.uniformMatrix3fv(pos, 1, cast(ubyte)(matrixTranspose ? GL_TRUE : GL_FALSE), m.data.ptr);
         }
         
         void uniform(const int pos, Matrix!(4,4) m){
-            context.uniformMatrix4fv(pos, 1, matrixTranspose ? GL_TRUE : GL_FALSE, m.data.ptr);
+            context.uniformMatrix4fv(pos, 1, cast(ubyte)(matrixTranspose ? GL_TRUE : GL_FALSE), m.data.ptr);
         }
         
     }

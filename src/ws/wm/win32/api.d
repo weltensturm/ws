@@ -1,13 +1,11 @@
 module ws.wm.win32.api;
 
+version(Windows):
+
 public import
-	derelict.opengl3.gl3,
 	core.sys.windows.windows;
 
 __gshared:
-
-version(Windows):
-
 
 extern(Windows){
 

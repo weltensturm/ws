@@ -12,10 +12,7 @@ import
 	ws.list,
 	ws.x.atoms,
 	ws.x.draw,
-	derelict.opengl3.gl3,
 	ws.wm.x11.api;
-
-import derelictX = derelict.util.xtypes;
 
 __gshared:
 
@@ -324,7 +321,7 @@ class X11Window: Base {
 	}
 
 	GraphicsContext gcShare(){
-		return glXCreateContext(wm.displayHandle, cast(derelictX.XVisualInfo*)wm.graphicsInfo, cast(__GLXcontextRec*)graphicsContext, True);
+		return glXCreateContext(wm.displayHandle, wm.graphicsInfo, graphicsContext, True);
 	}
 
 

@@ -36,7 +36,6 @@ class Win32WindowManager: BaseWindowManager {
 
 	this(){
 		super();
-		DerelictGL3.load();
 		appInstance = GetModuleHandleW(null);
 		
 		windowClass.lpfnWndProc = cast(WNDPROC)&internalEvents;

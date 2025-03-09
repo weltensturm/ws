@@ -66,7 +66,7 @@ class GlDraw: DrawEmpty {
                 TextShader.vertex,
                 TextShader.fragment
         );
-        fonts = new CachedFactory!Font;
+        fonts = new CachedFactory!(ws.gl.font.Font);
     }
 
     override void resize(int[2] size){
@@ -222,8 +222,8 @@ class GlDraw: DrawEmpty {
 
     private:
 
-        CachedFactory!Font fonts;
-        Font font;
+        CachedFactory!(ws.gl.font.Font) fonts;
+        ws.gl.font.Font font;
         enum type {
             rect = 1,
             line,
