@@ -15,6 +15,7 @@
 
 	"sourcePaths": ["src"],
 	"importPaths": ["src"],
+  "dflags": ["-P-I/usr/include/freetype2"],
 
 	"libs-posix": ["X11", "GL", "Xrender", "Xft", "fontconfig", "Xext", "Xfixes", "Xinerama", "Xpresent"],
 	"libs-windows": ["opengl32", "user32"],
