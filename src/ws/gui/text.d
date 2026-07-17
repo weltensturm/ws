@@ -13,7 +13,7 @@ import
 	ws.gui.point;
 
 
-class Text: Base {
+class Text: Widget {
 
 	string text;
 	Shader shader;

@@ -18,6 +18,7 @@ string[] desktopPaths(){
 		~ environment.get("XDG_DATA_DIRS").split(':');
 }
 
+auto EXEC_REGEX = ctRegex!`\[[^\]\r\n]+\](?:\r?\n(?:[^\[\r\n].*)?)*`;
 
 class DesktopEntry {
 
@@ -28,6 +29,7 @@ class DesktopEntry {
 	string comment;
 	string terminal;
 	string[] categories;
+	string[] onlyShowInDesktop;
 	bool noDisplay;
 
 	this(string path, string text){
@@ -44,6 +46,8 @@ class DesktopEntry {
 				categories = line.chompPrefix("Categories=").split(";").filter!"a.length".array;
 			else if(validSection && line.startsWith("NoDisplay="))
 				noDisplay = line.canFind("true");
+			else if(validSection && line.startsWith("OnlyShowIn="))
+				onlyShowInDesktop = line.chompPrefix("OnlyShowIn=").split(';');
 		}
 	}
 
@@ -53,7 +57,7 @@ DesktopEntry[] readDesktop(string path){
 	DesktopEntry[] result;
 	if(!path.isFile)
 		return result;
-	foreach(section; matchAll(path.readText, `\[[^\]\r\n]+\](?:\r?\n(?:[^\[\r\n].*)?)*`)){
+	foreach(section; matchAll(path.readText, EXEC_REGEX)){
 		result ~= new DesktopEntry(path, section.hit);
 	}
 	return result;

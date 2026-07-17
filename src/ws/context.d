@@ -35,7 +35,7 @@ void execute(string context, string type, string serialized, string command, str
 					context.log("%s stderr %s".format(pid, line));
 			}
 			auto res = pipes.pid.wait;
-			context.log("%s exit %s".format(pid, res));
+			reader.yieldForce;
 			context.logExec("%s exit %s".format(pid, res));
 		}catch(Throwable t)
 			writeln(t);
@@ -55,6 +55,7 @@ void openDir(string context, string path){
 
 
 void openPath(string context, string path, string type){
+	//TODO: ass;
 	auto command = `exo-open "%s" || xdg-open "%s"`.format(path,path);
 	context.execute(type, path, command);
 }

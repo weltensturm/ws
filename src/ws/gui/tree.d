@@ -11,11 +11,11 @@ import
 	ws.gui.button;
 
 
-class DynamicList: Base {
+class DynamicList: Widget {
 	
 	int padding = 5;
 
-	override Base add(Base elem){
+	override Widget add(Widget elem){
 		super.add(elem);
 		update;
 		return elem;
@@ -46,7 +46,7 @@ class DynamicList: Base {
 			parent.resizeRequest(this, [size.w, h]);
 	}
 
-	override void resizeRequest(Base child, int[2] size){
+	override void resizeRequest(Widget child, int[2] size){
 		child.resize(size);
 		update;
 	}
@@ -57,7 +57,7 @@ double sinApproach(double a){
 	return (sin((a-0.5)*PI)+1)/2;
 }
 
-class Tree: Base {
+class Tree: Widget {
 
 	Button expander;
 	bool expanded = false;
@@ -75,14 +75,14 @@ class Tree: Base {
 		add(expander);
 	}
 
-	override Base add(Base elem){
+	override Widget add(Widget elem){
 		super.add(elem);
 		update;
 		resize(size);
 		return elem;
 	}
 
-	Base add(Base elem, bool delegate(Base) here){
+	Widget add(Widget elem, bool delegate(Widget) here){
 		foreach(i, c; children ~ null){
 			if(here(c)){
 				elem.parent = this;
@@ -118,13 +118,13 @@ class Tree: Base {
 			animation.change(h);
 	}
 
-	override void resizeRequest(Base child, int[2] size){
+	override void resizeRequest(Widget child, int[2] size){
 		child.resize(size);
 		update;
 		animation.replace(animation.end);
 	}
 
-	override void remove(Base child){
+	override void remove(Widget child){
 		super.remove(child);
 		update;
 	}

@@ -9,7 +9,7 @@ import
 	ws.gui.point;
 
 
-class Button: Base {
+class Button: Widget {
 	
 	Event!() leftClick;
 	Event!() rightClick;

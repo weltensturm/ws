@@ -11,6 +11,30 @@ import
     ws.gl.gl;
 
 
+class GlContext {
+
+    void swapBuffers(){}
+    void makeCurrent(){}
+
+    template opDispatch(string s){
+        auto opDispatch(Args...)(Args args){
+            this.makeCurrent;
+            enum s = s[0..1].capitalize ~ s[1..$];
+            debug { gl.check("?"); }
+            mixin("alias returns = typeof((){ return gl" ~ s ~ "(args); }() );");
+            static if(!is(returns == void)){
+                mixin("auto result = gl" ~ s ~ "(args);");
+                debug { gl.check("gl" ~ s); }
+                return result;
+            }else{
+                mixin("gl" ~ s ~ "(args);");
+                debug { gl.check("gl" ~ s); }
+            }
+        }
+    }
+
+}
+
 version(Windows){
 
 
@@ -45,7 +69,7 @@ version(Windows){
         
     }
 
-    __gshared class GlContext {
+    __gshared class WinGlContext: GlContext {
 
         GraphicsContext handle;
         __gshared GraphicsContext sharedHandle;
@@ -132,39 +156,25 @@ version(Windows){
             wglMakeCurrent(deviceContext, handle);
         }
 
-        void swapBuffers(){
+        override void swapBuffers(){
             assert(handle == sharedHandle, "Can only swap from main");
             SwapBuffers(deviceContext);
         }
 
-        template opDispatch(string s){
-            auto opDispatch(Args...)(Args args){
-                if(!handle && sharedHandle){
-                    synchronized(this){
-                        handle = spawn;
-                    }
-                }
-                if(current != handle){
-                    wglMakeCurrent(window, handle);
-                    current = handle;
-                }
-                assert(wglGetCurrentContext() == handle);
-                debug { gl.check("?"); }
-                enum s = s[0..1].capitalize ~ s[1..$];
-                mixin("alias returns = ReturnType!(gl" ~ s ~ ");");
-                static if(!is(returns == void)){
-                    mixin("auto result = gl" ~ s ~ "(args);");
-                    debug { gl.check("gl" ~ s); }
-                    return result;
-                }else{
-                    mixin("gl" ~ s ~ "(args);");
-                    debug { gl.check("gl" ~ s); }
+        override void makeCurrent(){
+            if(!handle && sharedHandle){
+                synchronized(this){
+                    handle = spawn;
                 }
             }
+            if(current != handle){
+                wglMakeCurrent(window, handle);
+                current = handle;
+            }
+            assert(wglGetCurrentContext() == handle);
         }
 
     }
-
 
 }
 
@@ -175,9 +185,11 @@ version(Posix){
 
     private static GraphicsContext current;
 
+
+
     T_glXCreateContextAttribsARB glXCreateContextAttribsARB;
 
-    class GlContext {
+    class XlibGlContext: GlContext {
 
         GraphicsContext handle;
         WindowHandle window;
@@ -265,34 +277,22 @@ version(Posix){
 
         }
 
-        void swapBuffers(){
+        override void makeCurrent(){
+            if(current != handle){
+                debug(glContextSwitch){
+                    import std.stdio;
+                    writeln("CONTEXT SWITCH %s -> %s".format(current, handle));
+                }
+                glXMakeCurrent(display, cast(uint)window, cast(__GLXcontextRec*)handle);
+                current = handle;
+            }
+            assert(glXGetCurrentContext() == cast(__GLXcontextRec*)handle);
+        }
+
+        override void swapBuffers(){
             glXSwapBuffers(display, cast(uint)window);
         }
 
-        template opDispatch(string s){
-            auto opDispatch(Args...)(Args args){
-                enum s = s[0..1].capitalize ~ s[1..$];
-                if(current != handle){
-                    debug(glContextSwitch){
-                        import std.stdio;
-                        writeln("CONTEXT SWITCH %s -> %s".format(current, handle));
-                    }
-                    glXMakeCurrent(display, cast(uint)window, cast(__GLXcontextRec*)handle);
-                    current = handle;
-                }
-                assert(glXGetCurrentContext() == cast(__GLXcontextRec*)handle);
-                debug { gl.check("?"); }
-                mixin("alias returns = typeof((){ return gl" ~ s ~ "(args); }() );");
-                static if(!is(returns == void)){
-                    mixin("auto result = gl" ~ s ~ "(args);");
-                    debug { gl.check("gl" ~ s); }
-                    return result;
-                }else{
-                    mixin("gl" ~ s ~ "(args);");
-                    debug { gl.check("gl" ~ s); }
-                }
-            }
-        }
 
     }
 

@@ -8,7 +8,7 @@ import
 	ws.gui.base;
 
 
-class Scroller: Base {
+class Scroller: Widget {
 	
 	double scroll = 0;
 	double scrollSpeed = 0;
@@ -31,7 +31,7 @@ class Scroller: Base {
 		
 	}
 
-	override void resizeRequest(Base child, int[2] size){
+	override void resizeRequest(Widget child, int[2] size){
 		child.resize(size);
 		scroll = scroll.min(size.h - this.size.h).max(0);
 		update;

@@ -8,7 +8,7 @@ import
 	ws.gl.draw,
 	ws.gui.base;
 
-class Slider: Base {
+class Slider: Widget {
 
 	float[4] background = [0.2, 0.2, 0.2, 1];
 	float[4] slider = [1, 0.2, 0.2, 1];

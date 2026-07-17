@@ -11,7 +11,7 @@ import
 	ws.gui.text;
 
 
-class InputField: Base {
+class InputField: Widget {
 	
 	bool hasFocus = false;
 	Event!string onEnter;
@@ -52,11 +52,11 @@ class InputField: Base {
 		}
 	}
 
-	override void onKeyboard(Keyboard.key key, bool pressed){
+	override void onKeyboard(KeySym key, bool pressed){
 		if(!pressed)
 			return;
 		blockChar = true;
-		switch(key){
+		switch(key.keysym){
 			case Keyboard.backspace:
 				if(cursor > 0){
 					rawText = rawText[0..cursor-1] ~ rawText[cursor..$];

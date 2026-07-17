@@ -11,7 +11,7 @@ import
 	ws.gui.slider;
 
 
-class SliderDecorated: Base {
+class SliderDecorated: Widget {
 	
 	this(string t, float min = 0, float max = 1, float start = 0.5){
 		style.bg = [0, 0, 0, 0.5]; 

@@ -18,7 +18,7 @@ import
 __gshared:
 
 
-class Win32Window: Base {
+class Win32Window: Widget {
 
 	Mouse.cursor cursor = Mouse.cursor.inherit;
 	string title;
@@ -30,7 +30,7 @@ class Win32Window: Base {
 
 	bool hasMouse;
 	bool _hasFocus;
-	Base _dragging;
+	Widget _dragging;
 	bool draggingUnfocus;
 	int[2] _cursorPos;
 
@@ -199,7 +199,7 @@ class Win32Window: Base {
 		return _cursorPos;
 	}
 
-	override Base draggingChild(){
+	override Widget draggingChild(){
 		return _dragging;
 	}
 

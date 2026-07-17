@@ -5,7 +5,7 @@ import
 	ws.gui.base;
 
 
-class Grid: Base {
+class Grid: Widget {
 
 	Point tileSize;
 

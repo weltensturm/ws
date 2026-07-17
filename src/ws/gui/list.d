@@ -9,7 +9,7 @@ import
 	ws.gui.button;
 
 
-class List: Base {
+class List: Widget {
 	
 	int padding = 10;
 	int entryHeight = 30;

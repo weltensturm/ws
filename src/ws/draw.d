@@ -1,7 +1,7 @@
 module ws.draw;
 
 
-class DrawEmpty {
+class DrawInterface {
 
 	void destroy(){}
 

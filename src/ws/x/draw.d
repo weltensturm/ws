@@ -24,8 +24,8 @@ class Color {
     long[4] rgba;
 
     this(Display* dpy, int screen, long[4] values){
-        Colormap cmap = DefaultColormap(dpy, screen);
-        Visual* vis = DefaultVisual(dpy, screen);
+        Colormap cmap = XDefaultColormap(dpy, screen);
+        Visual* vis = XDefaultVisual(dpy, screen);
         rgba = values;
         auto name = "#%02x%02x%02x".format(values[0], values[1], values[2]);
         if(!XftColorAllocName(dpy, vis, cmap, name.toStringz, &rgb))
@@ -219,7 +219,7 @@ class PictureDoubleBuffer {
 }
 
 
-class XDraw: DrawEmpty {
+class XDraw: DrawInterface {
 
     int[2] size;
     Display* dpy;

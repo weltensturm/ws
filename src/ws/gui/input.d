@@ -79,67 +79,75 @@ static class Mouse {
 	}
 }
 
+struct KeySym {
+	alias Type = ulong;
+	Type keysym;
+}
+
+struct KeyCode {
+	alias Type = uint;
+	Type keycode;
+}
+
 static class Keyboard {
 	
-	alias ulong key;
-	
 	version(Windows){
-		enum: key {
-			shift = 16,
-			control = 17,
-			caps = 20,
-			win = 91,
-			escape = 27,
-			enter = 13,
-			backspace = 8,
-			space = 32,
-			del = 46,
+		enum: KeySym.Type {
+			shift = KeySym(16),
+			control = KeySym(17),
+			caps = KeySym(20),
+			win = KeySym(91),
+			escape = KeySym(27),
+			enter = KeySym(13),
+			backspace = KeySym(8),
+			space = KeySym(32),
+			del = KeySym(46),
 			
-			left = 37,
-			up = 38,
-			right = 39,
-			down = 40
+			left = KeySym(37),
+			up = KeySym(38),
+			right = KeySym(39),
+			down = KeySym(40)
 		}
 	}
 	version(linux){
-		enum: key {
+		enum: KeySym.Type {
 			
-			shift = cast(key)XK_Shift_L,
-			shiftR = cast(key)XK_Shift_R,
-			control = cast(key)XK_Control_L,
-			controlR = cast(key)XK_Control_R,
-			caps = cast(key)XK_Caps_Lock,
-			win = cast(key)XK_Super_L,
-			winR = cast(key)XK_Super_R,
+			shift = XK_Shift_L,
+			shiftR = XK_Shift_R,
+			control = XK_Control_L,
+			controlR = XK_Control_R,
+			caps = XK_Caps_Lock,
+			win = XK_Super_L,
+			winR = XK_Super_R,
 
-			escape =	cast(key)XK_Escape,
-			enter = cast(key)XK_Return,
+			escape =	XK_Escape,
+			enter = XK_Return,
 
-			backspace = cast(key)XK_BackSpace,
-			space = cast(key)XK_space,
-			del = cast(key)XK_Delete,
+			backspace = XK_BackSpace,
+			space = XK_space,
+			del = XK_Delete,
 
-			left = cast(key)XK_Left,
-			up = cast(key)XK_Up,
-			right = cast(key)XK_Right,
-			down = cast(key)XK_Down,
+			left = XK_Left,
+			up = XK_Up,
+			right = XK_Right,
+			down = XK_Down,
 
 		}
 	}
 	
-	static bool get(key i){
-		return chars[i];
+	static bool get(ulong i){
+		return keys[i];
 	}
 	
-	static void set(key i, bool p){
-		chars[i] = p;
+	static void set(ulong i, bool p){
+		keys[i] = p;
 	}
 	
-	static void emulate(key k, bool p){
+	static void emulate(KeyCode k, bool p){
 		version(Windows){
-			if(chars[k] == p)
+			if(keys[k] == p)
 				return;
-			chars[k] = p;
+			keys[k] = p;
 			INPUT ip;
 			ip.type = INPUT_KEYBOARD;
 			ip.ki.wScan = 0;
@@ -152,7 +160,7 @@ static class Keyboard {
 	}
 
 	protected {
-		static bool[key] chars;
+		static bool[ulong] keys;
 	}
 	
 }

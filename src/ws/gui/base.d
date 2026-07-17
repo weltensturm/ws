@@ -21,17 +21,17 @@ T[] without(T)(T[] array, T elem){
 }
 
 
-class Base {
+class Widget {
 
 	Style style;
 	Mouse.cursor cursor;
 	int[2] size;
 	int[2] pos;
-	Base parent;
-	Base mouseChild;
-	Base keyboardChild;
+	Widget parent;
+	Widget mouseChild;
+	Widget keyboardChild;
 	bool hidden = false;
-	Base[] children;
+	Widget[] children;
 	bool[int] buttons;
 	bool drawOutside = true;
 
@@ -41,7 +41,7 @@ class Base {
 		return e;
 	}
 
-	Base add(Base gui){
+	Widget add(Widget gui){
 		if(gui.parent)
 			throw new Exception("Trying to embed element that already has a parent");
 		gui.parent = this;
@@ -50,17 +50,17 @@ class Base {
 		return gui;
 	}
 
-	Base[] hiddenChildren(){
+	Widget[] hiddenChildren(){
 		return children.filter!"a.hidden".array;
 	}
 
-	void remove(Base widget){
+	void remove(Widget widget){
 		assert(widget.parent == this);
 		children = children.without(widget);
 		widget.parent = null;
 	}
 
-	Base findChild(int x, int y, Base[] filter=[]){
+	Widget findChild(int x, int y, Widget[] filter=[]){
 		foreach(child; children){
 			if(child.hidden || filter.canFind(child))
 				continue;
@@ -73,34 +73,34 @@ class Base {
 		return this;
 	}
 
-	Base draggingChild(){
+	Widget draggingChild(){
 		if(parent)
 			return parent.draggingChild;
 		return null;
 	}
 
-	Base drag(int[2] offset){
+	Widget drag(int[2] offset){
 		return null;
 	}
 
-	Base dropTarget(int x, int y, Base draggable){
+	Widget dropTarget(int x, int y, Widget draggable){
 		auto targetChild = findChild(x, y, [this,draggable]);
 		if(targetChild)
 			return targetChild.dropTarget(x, y, draggable);
 		return null;
 	}
 
-	void dropPreview(int x, int y, Base draggable, bool start){
+	void dropPreview(int x, int y, Widget draggable, bool start){
 		assert(false, "dropPreview not implemented");
 	}
 
-	void drop(int x, int y, Base draggable){
+	void drop(int x, int y, Widget draggable){
 		if(findChild(x, y, [this,draggable]))
 			findChild(x, y, [this,draggable]).drop(x, y, draggable);
 	}
 
 
-	Base root(){
+	Widget root(){
 		if(parent)
 			return parent.root;
 		return this;
@@ -116,7 +116,7 @@ class Base {
 		assert(0, "receiveShadow implies receive");
 	}
 
-	Base receiveShadow(Draggable what, int x, int y){
+	Widget receiveShadow(Draggable what, int x, int y){
 		foreach(child; children)
 			if(child.pos.x < x && child.pos.x+child.size.x > x && child.pos.y < y && child.pos.y+child.size.y > y)
 				return child.receiveShadow(what, x, y);
@@ -124,7 +124,7 @@ class Base {
 	}
 
 
-	void setTop(Base child){
+	void setTop(Widget child){
 		if(child.hidden || keyboardChild == child)
 			return;
 
@@ -200,7 +200,7 @@ class Base {
 		this.size = size;
 	}
 
-	void resizeRequest(Base child, int[2] size){}
+	void resizeRequest(Widget child, int[2] size){}
 
 	void move(int[2] pos){
 		foreach(c; children)
@@ -215,7 +215,7 @@ class Base {
 			move(pos);
 	}
 
-	void onKeyboard(Keyboard.key key, bool pressed){
+	void onKeyboard(KeySym key, bool pressed){
 		if(keyboardChild)
 			keyboardChild.onKeyboard(key, pressed);
 	};
@@ -276,7 +276,7 @@ class Base {
 			wm.active.setCursor(cursor);
 	}
 
-	DrawEmpty draw(){
+	DrawInterface draw(){
 		return parent.draw;
 	}
 
@@ -284,10 +284,10 @@ class Base {
 		foreach_reverse(c; children)
 			if(!c.hidden &&
 					(drawOutside
-					|| c.pos.x-c.size.w > pos.x
-					&& c.pos.x < pos.x+size.w
-					&& c.pos.y-c.size.h > pos.y
-					&& c.pos.y < pos.y+size.h))
+					|| (c.pos.x-c.size.w > pos.x
+						&& c.pos.x < pos.x+size.w
+						&& c.pos.y-c.size.h > pos.y
+						&& c.pos.y < pos.y+size.h)))
 				c.onDraw;
 	}
 
@@ -296,3 +296,5 @@ class Base {
 	}
 
 }
+
+deprecated alias Base = Widget;

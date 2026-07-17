@@ -8,6 +8,7 @@ import
     std.conv,
     std.algorithm,
     std.math,
+    std.exception,
 
     derelict.freetype.ft,
     derelict.util.exception,
@@ -19,6 +20,16 @@ import
     ws.gl.context,
     ws.gl.batch;
 
+import 
+    ws.bindings.harfbuzz:
+        hb_face_t,
+        hb_font_t,
+        hb_ft_font_create_referenced,
+        hb_ft_font_set_load_flags,
+        hb_ft_font_changed,
+        hb_font_set_scale,
+        hb_ft_font_set_funcs,
+        FT_FaceRec_;
 
 version(Posix){
     import std.path;
@@ -35,7 +46,6 @@ version(Posix){
         FcChar8,
         FcPatternDestroy;
 }
-
 
 
 private __gshared FT_Library ftLib;
@@ -197,26 +207,38 @@ class Font {
             height = cast(int)FT_MulFix(face.height, scale)/64;
             em = cast(int)FT_MulFix(face.units_per_EM, scale)/64;
             verticalOffset = -cast(int)FT_MulFix(face.descender, scale)/64;
+
+            hb = hb_ft_font_create_referenced(cast(FT_FaceRec_*)ftFace).enforce;
+            hb_ft_font_set_funcs(hb);
+            hb_ft_font_set_load_flags(hb, FONT_LOAD_FLAGS);
+            hb_ft_font_changed(hb);
         }
     }
 
     protected {
-        Glyph[dchar] glyphs;
+        Glyph[FT_UInt] glyphs;
         FT_Face ftFace;
     }
+    hb_font_t* hb;
 
     static class Glyph {
         uint tex;
         Batch vao;
         long advance;
+        long bitmap_left;
         private this(){}
     }
 
-    Glyph opIndex(dchar c){
+    enum FONT_LOAD_FLAGS = FT_LOAD_DEFAULT | FT_LOAD_TARGET_LCD;
+
+    Glyph opIndex(dchar c) => 
+        this[FT_Get_Char_Index(ftFace, c)];
+
+    Glyph opIndex(FT_UInt c) {
         if(c in glyphs)
             return glyphs[c];
         auto g = new Glyph;
-        FT_Error e = FT_Load_Glyph(ftFace, FT_Get_Char_Index(ftFace, c), FT_LOAD_FORCE_AUTOHINT);
+        FT_Error e = FT_Load_Glyph(ftFace, c, FONT_LOAD_FLAGS);
         if(e)
             throw new Exception("FT_Load_Glyph failed (" ~ tostring(e) ~ ")");
         FT_Glyph glyph;
@@ -250,18 +272,25 @@ class Font {
         context.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         context.texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         context.pixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        context.texImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData.ptr);
-        long x = ftFace.glyph.metrics.horiBearingX/64;
-        long y = ftFace.glyph.metrics.horiBearingY/64 + verticalOffset;
+        context.texImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+                           GL_RGBA, GL_UNSIGNED_BYTE, textureData.ptr);
+        long x = ftFace.glyph.bitmap_left;
+        long y = ftFace.glyph.bitmap_top + verticalOffset;
+        g.bitmap_left = x;
         g.advance = ftFace.glyph.metrics.horiAdvance/64;
-        g.vao = new Batch(context, gl.triangleFan, Batch.vert3 ~ Batch.tex2, [
-            x, y, 0, 0, 0,
-            x, y-height, 0, 0, 1,
-            x+width, y-height, 0, 1, 1,
-            x+width, y, 0, 1, 0
-        ]);
+        g.vao = new Batch(
+            context,
+            gl.triangleFan,
+            Batch.vert3 ~ Batch.tex2,
+            [
+                x,       y,        0, 0, 0,
+                x,       y-height, 0, 0, 1,
+                x+width, y-height, 0, 1, 1,
+                x+width, y,        0, 1, 0
+            ]
+        );
         glyphs[c] = g;
         return g;
     }
 
-};
+}

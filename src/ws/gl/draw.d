@@ -4,6 +4,7 @@ import
     std.conv,
     std.algorithm,
     std.random,
+    std.range,
     ws.exception,
     ws.draw,
     ws.cache,
@@ -12,10 +13,11 @@ import
     ws.gl.batch,
     ws.gl.shader,
     ws.gl.font,
+    ws.bindings.harfbuzz,
     ws.gui.point;
 
 
-class GlDraw: DrawEmpty {
+class GlDraw: DrawInterface {
 
     GlContext context;
 
@@ -163,18 +165,63 @@ class GlDraw: DrawEmpty {
         batchLine.draw();
     }
 
-    override int width(string text){
-        return text.dtext.map!(a => font[a].advance).sum.to!int;
+    struct GlyphShape {
+        dchar origChar;
+        uint glyphIndex;
+        float x_offset;
+        float y_offset;
+        float x_advance;
+        float y_advance;
+    }
+    
+    GlyphShape[] shape(string text){
+        hb_buffer_t* buf = hb_buffer_create();
+        scope(exit) hb_buffer_destroy(buf);
+        hb_buffer_add_utf8(buf, text.ptr, cast(int)text.length, 0, cast(int)text.length);
+        hb_buffer_guess_segment_properties(buf);
+
+        hb_shape(font.hb, buf, null, 0);
+
+        uint count;
+        auto infos = hb_buffer_get_glyph_infos(buf, &count);
+        auto pos = hb_buffer_get_glyph_positions(buf, &count);
+
+        GlyphShape[] shape;
+        shape.length = count;
+        foreach(i; 0 .. count){
+            shape[i] = GlyphShape(
+                origChar: text[infos[i].cluster],
+                glyphIndex: infos[i].codepoint,
+                x_offset: pos[i].x_offset,
+                y_offset: pos[i].y_offset,
+                x_advance: pos[i].x_advance,
+                y_advance: pos[i].y_advance
+            );
+        }
+        return shape;
     }
 
-    override int text(int[2] pos, string text, double offset=-0.2){
+    // override int width(string text) => this.width(this.shape(text.dtext));
+    override int width(string text) => this.width(this.shape(text));
+
+    int width(GlyphShape[] shape){
+        return shape
+            .map!(a => a.x_advance / 64)
+            .sum
+            .to!int;
+    }
+
+    override int text(int[2] pos, string text_utf8, double offset=-0.2){
         if(!font)
             exception("no font active");
+        auto text = text_utf8; //.dtext;
+        auto shape = this.shape(text);
+        auto width = this.width(shape);
         context.enable(GL_BLEND);
         context.blendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
         auto offsetRight = max(0.0,-offset)*fontHeight;
         auto offsetLeft = max(0.0,offset-1)*fontHeight;
-        float x = pos.x - min(1,max(0,offset))*width(text) + offsetRight - offsetLeft;
+        float x = pos.x - offset.min(1).max(0)*width + offsetRight - offsetLeft;
         auto s = activateShader(type.text);
         float[3] scale = [1,1,0];
         s["Screen"] = screen;
@@ -184,21 +231,29 @@ class GlDraw: DrawEmpty {
         s["Clip"] = clipStack.length ? clipStack[$-1] : [0, 0, screen.w, screen.h];
         float y = pos.y;
         context.activeTexture(GL_TEXTURE0);
-        foreach(dchar c; text){
-            if(c == '\n'){
+        foreach(i, c; shape){
+            if(c.origChar == '\n'){
                 x = pos.x;
                 y -= font.height;
                 continue;
             }
-            auto g = font[c];
+            auto g = font[c.glyphIndex];
             context.bindTexture(GL_TEXTURE_2D, g.tex);
-            float[3] p = [cast(int)x, cast(int)y, 0];
+            float[3] p = [
+                cast(int)(x + c.x_offset / 64f),
+                cast(int)(y + c.y_offset / 64f),
+                0
+            ];
             s["Offset"] = p;
             g.vao.draw();
-            x += g.advance;
+            // import std.stdio;
+            // writeln("CHR ", c, " bitmap_left ", g.bitmap_left,
+                    // " OFF ", shape[i].x_offset, "ADV ", shape[i].x_advance);
+            x += c.x_advance / 64f;
+            import std.stdio;
         }
         context.blendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        return width(text);//x.to!int-pos.x;
+        return width;
     }
 
     override int text(int[2] pos, int h, string text, double offset=-0.2){

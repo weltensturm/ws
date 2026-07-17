@@ -7,7 +7,7 @@ import
 
 class Draggable {
 
-	Base handle(){
+	Widget handle(){
 		assert(0);
 	}
 
@@ -15,7 +15,7 @@ class Draggable {
 
 	}
 
-	Base shadow(){
+	Widget shadow(){
 		assert(0);
 	}
 
@@ -24,11 +24,11 @@ class Draggable {
 
 class Dragger {
 
-	Base root;
+	Widget root;
 	Draggable grabbed;
-	Base shadowHolder;
+	Widget shadowHolder;
 
-	this(Base root){
+	this(Widget root){
 		this.root = root;
 	}
 

@@ -31,7 +31,7 @@ class TabButton: Button {
 }
 
 
-class Tabs: Base {
+class Tabs: Widget {
 
 	Point buttonSize = Point(150, 30);
 	long active = -1;
@@ -57,7 +57,7 @@ class Tabs: Base {
 	protected string font = "Ubuntu-B";
 	protected int fontSize = 12;
 
-	Page addPage(TabButton button, Base gui){
+	Page addPage(TabButton button, Widget gui){
 		add(button);
 		add(gui);
 		button.font = font;
@@ -82,7 +82,7 @@ class Tabs: Base {
 		return pages.back;
 	}
 
-	Page addPage(string name, Base gui){
+	Page addPage(string name, Widget gui){
 		auto button = new TabButton(name);
 		return addPage(button, gui);
 	}
@@ -131,7 +131,7 @@ class Tabs: Base {
 
 	struct Page {
 		TabButton button;
-		Base content;
+		Widget content;
 	}
 
 	List!Page pages;

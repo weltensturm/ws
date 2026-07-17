@@ -2,7 +2,7 @@ module ws.gui.background;
 
 import ws.gui.base, ws.gl.draw;
 
-class Background: Base {
+class Background: Widget {
 	float[4] color;
 	this(float[4] c){
 		color = c;

@@ -17,7 +17,10 @@ import
 __gshared:
 
 
-class X11Window: Base {
+private alias KeySym = ws.gui.input.KeySym;
+
+
+class X11Window: Widget {
 
 	Mouse.cursor cursor = Mouse.cursor.inherit;
 	string title;
@@ -28,12 +31,12 @@ class X11Window: Base {
 	XIC inputContext;
 	int oldX, oldY;
 	int jumpTargetX, jumpTargetY;
-	DrawEmpty _draw;
+	DrawInterface _draw;
 	int[2] _cursorPos;
 
 	bool _keyboardFocus;
 	bool mouseFocus;
-	Base _dragging;
+	Widget _dragging;
 	bool draggingUnfocus;
 
 	this(WindowHandle handle){
@@ -114,11 +117,11 @@ class X11Window: Base {
 		assert(windowHandle);
 	}
 
-	override DrawEmpty draw(){
+	override DrawInterface draw(){
 		return _draw;
 	}
 
-	void draw(DrawEmpty draw){
+	void draw(DrawInterface draw){
 		_draw = draw;
 	}
 
@@ -126,7 +129,7 @@ class X11Window: Base {
 		return _cursorPos;
 	}
 
-	override Base draggingChild(){
+	override Widget draggingChild(){
 		return _dragging;
 	}
 
@@ -344,18 +347,18 @@ class X11Window: Base {
 				}
 				break;
 			case KeyPress:
-				onKeyboard(cast(Keyboard.key)XLookupKeysym(&e.xkey,0), true);
+				onKeyboard(KeySym(XLookupKeysym(&e.xkey,0)), true);
 				if(!isActive)
 					break;
 				char[25] str;
-				KeySym ks;
+				ulong ks;
 				Status st;
 				size_t l = Xutf8LookupString(inputContext, &e.xkey, str.ptr, 25, &ks, &st);
 				foreach(dchar c; str[0..l])
 					if(!c.isControl)
 						onKeyboard(c);
 				break;
-			case KeyRelease: onKeyboard(cast(Keyboard.key)XLookupKeysym(&e.xkey,0), false); break;
+			case KeyRelease: onKeyboard(KeySym(XLookupKeysym(&e.xkey,0)), false); break;
 			case MotionNotify:
 				_cursorPos = [e.xmotion.x, size.y - e.xmotion.y];
 				onMouseMove(e.xmotion.x, size.y - e.xmotion.y);
